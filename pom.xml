@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<modelVersion>4.0.0</modelVersion>
+
+<groupId>cresco.io</groupId>
+<artifactId>library</artifactId>
+<version>1.0-SNAPSHOT</version>
+
+
+<properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <jdk>1.8</jdk>
+    <maven.compiler.version>3.5.1</maven.compiler.version>
+    <gson.version>2.8.5</gson.version>
+    <junit.version>4.12</junit.version>
+</properties>
+
+
+<dependencies>
+
+    <dependency>
+        <groupId>org.osgi</groupId>
+        <artifactId>org.osgi.core</artifactId>
+        <version>6.0.0</version>
+        <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-core</artifactId>
+        <version>1.0.5</version>
+    </dependency>
+
+    <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-registry-jmx</artifactId>
+        <version>1.0.5</version>
+        <exclusions>
+            <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+
+</dependencies>
+
+<build>
+    <plugins>
+
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>${maven.compiler.version}</version>
+            <configuration>
+                <source>${jdk}</source>
+                <target>${jdk}</target>
+            </configuration>
+        </plugin>
+
+        <plugin>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>maven-bundle-plugin</artifactId>
+            <version>3.5.0</version>
+            <extensions>true</extensions>
+            <configuration>
+                <instructions>
+                    <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
+                    <Bundle-Name>Cresco Library</Bundle-Name>
+                    <Bundle-Description>Library for Cresco</Bundle-Description>
+                    <Bundle-Vendor>Cresco.io</Bundle-Vendor>
+                    <Bundle-Version>${project.version}-${maven.build.timestamp}</Bundle-Version>
+                    <Import-Package>*;resolution:=optional</Import-Package>
+                    <Embed-Dependency>!org.osgi.*;*</Embed-Dependency>
+                    <Export-Package>
+                        com.codahale.metrics.*;
+                        org.LatencyUtils;
+                        io.micrometer.*;
+                        io.cresco.library.*
+                    </Export-Package>
+                    <Bundle-RequiredExecutionEnvironment>JavaSE-1.8</Bundle-RequiredExecutionEnvironment>
+                </instructions>
+            </configuration>
+        </plugin>
+
+    </plugins>
+</build>
+
+</project>
