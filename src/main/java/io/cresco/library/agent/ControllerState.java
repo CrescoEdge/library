@@ -19,11 +19,7 @@ public class ControllerState {
 	}
 
 	public boolean isActive() {
-		if((currentMode == Mode.AGENT) || (currentMode == Mode.GLOBAL) || (currentMode == Mode.REGION_GLOBAL)) {
-			return true;
-		} else {
-			return false;
-		}
+        return (currentMode == Mode.AGENT) || (currentMode == Mode.GLOBAL) || (currentMode == Mode.REGION_GLOBAL);
 	}
 
 	/*
@@ -182,7 +178,7 @@ public class ControllerState {
 		globalRegion = null;
 	}
 
-	public static enum Mode {
+	public enum Mode {
 		PRE_INIT,
 		AGENT_INIT,
 		AGENT,
@@ -198,7 +194,7 @@ public class ControllerState {
 		GLOBAL_FAILED,
 		GLOBAL_SHUTDOWN;
 
-		private Mode() {
+		Mode() {
 
 		}
 	}

@@ -15,7 +15,7 @@ public class Config {
     /** Environmental Variable Prefix */
     private static final String ENV_PREFIX = "CRESCO_";
     /** Plugin configuration object */
-    protected Map<String,Object> configMap;
+    protected final Map<String,Object> configMap;
     /**
      * Constructor
      * @param configMap     Plugin configuration object

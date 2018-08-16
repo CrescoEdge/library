@@ -16,7 +16,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.jar.Attributes;
@@ -26,9 +29,8 @@ import java.util.jar.Manifest;
 public class PluginBuilder {
 
     private AgentService agentService;
-    //private LogService logService;
     private Config config;
-    private CrescoMeterRegistry crescoMeterRegistry;
+    private final CrescoMeterRegistry crescoMeterRegistry;
     private String baseClassName;
     private Executor executor;
     private boolean isActive;
@@ -42,8 +44,6 @@ public class PluginBuilder {
     public PluginBuilder(AgentService agentService,String className, BundleContext context, Map<String,Object> configMap) {
 
         this.msgInProcessQueue = Executors.newCachedThreadPool();
-        //this.msgInProcessQueue = Executors.newFixedThreadPool(100);
-
 
         String identString = null;
 
@@ -57,6 +57,7 @@ public class PluginBuilder {
                     boolean isAssigned = false;
                     while(!isAssigned) {
                         try {
+                            //noinspection unchecked
                             this.agentService = (AgentService) context.getService(sr);
                             isAssigned = true;
                         } catch (Exception ex) {
@@ -123,7 +124,6 @@ public class PluginBuilder {
             }
 
             if(executor != null) {
-                    //new Thread(new MessageProcessor(message)).start();
                     msgInProcessQueue.submit(new MessageProcessor(message));
             }
 
@@ -268,7 +268,6 @@ public class PluginBuilder {
                         String callId = retMsg.getParam(("callId-" + getRegion() + "-" +
                                 getAgent() + "-" + getPluginID()));
 
-                        //if ((callId != null) && (ttl > 0)) {
                         if (callId != null) {
                             receiveRPC(callId, retMsg);
                         } else {
@@ -283,8 +282,6 @@ public class PluginBuilder {
                 }
 
             } catch (Exception e) {
-                //logger.error("Message Execution Exception: {}", e.getMessage());
-                //System.out.println("MessageProcessor ERROR : " + msg.getParams());
                 e.printStackTrace();
             }
         }
@@ -292,24 +289,38 @@ public class PluginBuilder {
 
     public String getPluginName(String jarFile) {
         String version = null;
+
         try{
-            //String jarFile = AgentEngine.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-            //logger.debug("JARFILE:" + jarFile);
-            //File file = new File(jarFile.substring(5, (jarFile.length() )));
             File file = new File(jarFile);
 
             boolean calcHash = true;
             BasicFileAttributes attr = Files.readAttributes(file.toPath(), BasicFileAttributes.class);
             long fileTime = attr.creationTime().toMillis();
 
-            FileInputStream fis = new FileInputStream(file);
-            @SuppressWarnings("resource")
-            JarInputStream jarStream = new JarInputStream(fis);
-            Manifest mf = jarStream.getManifest();
-            if(mf != null) {
-                Attributes mainAttribs = mf.getMainAttributes();
-                if(mainAttribs != null) {
-                    version = mainAttribs.getValue("Bundle-SymbolicName");
+            FileInputStream fis = null;
+            JarInputStream jarStream = null;
+
+            try {
+
+                fis = new FileInputStream(file);
+                jarStream = new JarInputStream(fis);
+                Manifest mf = jarStream.getManifest();
+                if (mf != null) {
+                    Attributes mainAttribs = mf.getMainAttributes();
+                    if (mainAttribs != null) {
+                        version = mainAttribs.getValue("Bundle-SymbolicName");
+                    }
+                }
+            } catch(Exception ex) {
+                ex.printStackTrace();
+            } finally {
+
+                if(jarStream != null) {
+                    jarStream.close();
+                }
+
+                if(fis != null) {
+                    fis.close();
                 }
             }
         }
@@ -323,24 +334,36 @@ public class PluginBuilder {
     public String getPluginVersion(String jarFile) {
         String version = null;
         try{
-            //String jarFile = AgentEngine.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-            //logger.debug("JARFILE:" + jarFile);
-            //File file = new File(jarFile.substring(5, (jarFile.length() )));
             File file = new File(jarFile);
 
             boolean calcHash = true;
             BasicFileAttributes attr = Files.readAttributes(file.toPath(), BasicFileAttributes.class);
             long fileTime = attr.creationTime().toMillis();
 
-            FileInputStream fis = new FileInputStream(file);
-            @SuppressWarnings("resource")
-            JarInputStream jarStream = new JarInputStream(fis);
-            Manifest mf = jarStream.getManifest();
+            FileInputStream fis = null;
+            JarInputStream jarStream = null;
 
-            if(mf != null) {
-                Attributes mainAttribs = mf.getMainAttributes();
-                if(mainAttribs != null) {
-                    version = mainAttribs.getValue("Bundle-Version");
+            try {
+                fis = new FileInputStream(file);
+                jarStream = new JarInputStream(fis);
+                Manifest mf = jarStream.getManifest();
+
+                if (mf != null) {
+                    Attributes mainAttribs = mf.getMainAttributes();
+                    if (mainAttribs != null) {
+                        version = mainAttribs.getValue("Bundle-Version");
+                    }
+                }
+            } catch(Exception ex) {
+                ex.printStackTrace();
+            } finally {
+
+                if(jarStream != null) {
+                    jarStream.close();
+                }
+
+                if(fis != null) {
+                    fis.close();
                 }
             }
         }
@@ -380,30 +403,30 @@ public class PluginBuilder {
                 pluginFiles = new ArrayList<>();
                 File[] listOfFiles = folder.listFiles();
 
-                for (int i = 0; i < listOfFiles.length; i++)
-                {
-                    if (listOfFiles[i].isFile())
-                    {
-                        try{
-                            String jarPath = listOfFiles[i].getAbsolutePath();
-                            String jarFileName = listOfFiles[i].getName();
-                            String pluginName = getPluginName(jarPath);
-                            String pluginMD5 = getJarMD5(jarPath);
-                            String pluginVersion = getPluginVersion(jarPath);
-                            //System.out.println(pluginName + " " + jarFileName + " " + pluginVersion + " " + pluginMD5);
-                            //pluginFiles.add(listOfFiles[i].getAbsolutePath());
-                            Map<String,String> pluginMap = new HashMap<>();
-                            pluginMap.put("pluginname",pluginName);
-                            pluginMap.put("jarfile",jarFileName);
-                            pluginMap.put("md5",pluginMD5);
-                            pluginMap.put("version",pluginVersion);
-                            pluginFiles.add(pluginMap);
-                        } catch(Exception ex) {
+                if(listOfFiles != null) {
+                    for (int i = 0; i < listOfFiles.length; i++) {
+                        if (listOfFiles[i].isFile()) {
+                            try {
+                                String jarPath = listOfFiles[i].getAbsolutePath();
+                                String jarFileName = listOfFiles[i].getName();
+                                String pluginName = getPluginName(jarPath);
+                                String pluginMD5 = getJarMD5(jarPath);
+                                String pluginVersion = getPluginVersion(jarPath);
+                                //System.out.println(pluginName + " " + jarFileName + " " + pluginVersion + " " + pluginMD5);
+                                //pluginFiles.add(listOfFiles[i].getAbsolutePath());
+                                Map<String, String> pluginMap = new HashMap<>();
+                                pluginMap.put("pluginname", pluginName);
+                                pluginMap.put("jarfile", jarFileName);
+                                pluginMap.put("md5", pluginMD5);
+                                pluginMap.put("version", pluginVersion);
+                                pluginFiles.add(pluginMap);
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
 
                         }
 
                     }
-
                 }
                 if(pluginFiles.isEmpty())
                 {

@@ -1,14 +1,12 @@
 package io.cresco.library.messaging;
 
 
-
 import io.cresco.library.plugin.PluginBuilder;
 import io.cresco.library.utilities.CLogger;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -23,10 +21,10 @@ public class RPC {
     /** Maximum iterations to check for RPC return message */
     private static final int MAX_INTERVALS = 300;
     /** Cresco logger */
-    private CLogger logger;
+    private final CLogger logger;
     /** Communication channel */
     private Map<String, MsgEvent> rpcMap;
-    private AtomicBoolean lock = new AtomicBoolean();
+    private final AtomicBoolean lock = new AtomicBoolean();
 
 
     private PluginBuilder plugin;

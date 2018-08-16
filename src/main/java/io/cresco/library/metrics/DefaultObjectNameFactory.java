@@ -1,10 +1,9 @@
 package io.cresco.library.metrics;
 
+import com.codahale.metrics.ObjectNameFactory;
+
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
-
-import com.codahale.metrics.JmxReporter;
-import com.codahale.metrics.ObjectNameFactory;
 
 public class DefaultObjectNameFactory implements ObjectNameFactory {
 
