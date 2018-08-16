@@ -1,4 +1,4 @@
-package io.cresco.library.plugin;
+package library.plugin;
 
 
 import java.util.Iterator;
@@ -15,7 +15,7 @@ public class Config {
     /** Environmental Variable Prefix */
     private static final String ENV_PREFIX = "CRESCO_";
     /** Plugin configuration object */
-    protected final Map<String,Object> configMap;
+    protected Map<String,Object> configMap;
     /**
      * Constructor
      * @param configMap     Plugin configuration object

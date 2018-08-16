@@ -1,4 +1,4 @@
-package io.cresco.library.agent;
+package library.agent;
 
 
 
@@ -19,7 +19,11 @@ public class ControllerState {
 	}
 
 	public boolean isActive() {
-        return (currentMode == Mode.AGENT) || (currentMode == Mode.GLOBAL) || (currentMode == Mode.REGION_GLOBAL);
+		if((currentMode == Mode.AGENT) || (currentMode == Mode.GLOBAL) || (currentMode == Mode.REGION_GLOBAL)) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	/*
@@ -178,7 +182,7 @@ public class ControllerState {
 		globalRegion = null;
 	}
 
-	public enum Mode {
+	public static enum Mode {
 		PRE_INIT,
 		AGENT_INIT,
 		AGENT,
@@ -194,7 +198,7 @@ public class ControllerState {
 		GLOBAL_FAILED,
 		GLOBAL_SHUTDOWN;
 
-		Mode() {
+		private Mode() {
 
 		}
 	}

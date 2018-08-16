@@ -1,4 +1,4 @@
-package io.cresco.library.messaging;
+package library.messaging;
 
 import javax.xml.bind.DatatypeConverter;
 import javax.xml.bind.annotation.XmlRootElement;

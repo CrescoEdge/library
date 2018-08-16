@@ -1,4 +1,4 @@
-package io.cresco.library.metrics;
+package library.metrics;
 
 
 import com.codahale.metrics.*;
@@ -513,7 +513,7 @@ public class CrescoReporter implements Reporter, Closeable {
             this.objectNameFactory = objectNameFactory;
         }
 
-        private void registerMBean(Object mBean, ObjectName objectName) throws JMException {
+        private void registerMBean(Object mBean, ObjectName objectName) throws InstanceAlreadyExistsException, JMException {
             ObjectInstance objectInstance = mBeanServer.registerMBean(mBean, objectName);
             if (objectInstance != null) {
                 // the websphere mbeanserver rewrites the objectname to include

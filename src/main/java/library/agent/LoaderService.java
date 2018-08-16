@@ -1,4 +1,4 @@
-package io.cresco.library.agent;
+package library.agent;
 
 
 public interface LoaderService {

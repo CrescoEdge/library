@@ -1,4 +1,4 @@
-package io.cresco.library.plugin;
+package library.plugin;
 
 import io.cresco.library.agent.AgentService;
 import io.cresco.library.messaging.MsgEvent;
@@ -29,8 +29,9 @@ import java.util.jar.Manifest;
 public class PluginBuilder {
 
     private AgentService agentService;
+    //private LogService logService;
     private Config config;
-    private final CrescoMeterRegistry crescoMeterRegistry;
+    private CrescoMeterRegistry crescoMeterRegistry;
     private String baseClassName;
     private Executor executor;
     private boolean isActive;
@@ -44,6 +45,8 @@ public class PluginBuilder {
     public PluginBuilder(AgentService agentService,String className, BundleContext context, Map<String,Object> configMap) {
 
         this.msgInProcessQueue = Executors.newCachedThreadPool();
+        //this.msgInProcessQueue = Executors.newFixedThreadPool(100);
+
 
         String identString = null;
 
@@ -57,7 +60,6 @@ public class PluginBuilder {
                     boolean isAssigned = false;
                     while(!isAssigned) {
                         try {
-                            //noinspection unchecked
                             this.agentService = (AgentService) context.getService(sr);
                             isAssigned = true;
                         } catch (Exception ex) {
@@ -124,6 +126,7 @@ public class PluginBuilder {
             }
 
             if(executor != null) {
+                    //new Thread(new MessageProcessor(message)).start();
                     msgInProcessQueue.submit(new MessageProcessor(message));
             }
 
@@ -268,6 +271,7 @@ public class PluginBuilder {
                         String callId = retMsg.getParam(("callId-" + getRegion() + "-" +
                                 getAgent() + "-" + getPluginID()));
 
+                        //if ((callId != null) && (ttl > 0)) {
                         if (callId != null) {
                             receiveRPC(callId, retMsg);
                         } else {
@@ -282,6 +286,8 @@ public class PluginBuilder {
                 }
 
             } catch (Exception e) {
+                //logger.error("Message Execution Exception: {}", e.getMessage());
+                //System.out.println("MessageProcessor ERROR : " + msg.getParams());
                 e.printStackTrace();
             }
         }
@@ -403,30 +409,30 @@ public class PluginBuilder {
                 pluginFiles = new ArrayList<>();
                 File[] listOfFiles = folder.listFiles();
 
-                if(listOfFiles != null) {
-                    for (int i = 0; i < listOfFiles.length; i++) {
-                        if (listOfFiles[i].isFile()) {
-                            try {
-                                String jarPath = listOfFiles[i].getAbsolutePath();
-                                String jarFileName = listOfFiles[i].getName();
-                                String pluginName = getPluginName(jarPath);
-                                String pluginMD5 = getJarMD5(jarPath);
-                                String pluginVersion = getPluginVersion(jarPath);
-                                //System.out.println(pluginName + " " + jarFileName + " " + pluginVersion + " " + pluginMD5);
-                                //pluginFiles.add(listOfFiles[i].getAbsolutePath());
-                                Map<String, String> pluginMap = new HashMap<>();
-                                pluginMap.put("pluginname", pluginName);
-                                pluginMap.put("jarfile", jarFileName);
-                                pluginMap.put("md5", pluginMD5);
-                                pluginMap.put("version", pluginVersion);
-                                pluginFiles.add(pluginMap);
-                            } catch (Exception ex) {
-                                ex.printStackTrace();
-                            }
+                for (int i = 0; i < listOfFiles.length; i++)
+                {
+                    if (listOfFiles[i].isFile())
+                    {
+                        try{
+                            String jarPath = listOfFiles[i].getAbsolutePath();
+                            String jarFileName = listOfFiles[i].getName();
+                            String pluginName = getPluginName(jarPath);
+                            String pluginMD5 = getJarMD5(jarPath);
+                            String pluginVersion = getPluginVersion(jarPath);
+                            //System.out.println(pluginName + " " + jarFileName + " " + pluginVersion + " " + pluginMD5);
+                            //pluginFiles.add(listOfFiles[i].getAbsolutePath());
+                            Map<String,String> pluginMap = new HashMap<>();
+                            pluginMap.put("pluginname",pluginName);
+                            pluginMap.put("jarfile",jarFileName);
+                            pluginMap.put("md5",pluginMD5);
+                            pluginMap.put("version",pluginVersion);
+                            pluginFiles.add(pluginMap);
+                        } catch(Exception ex) {
 
                         }
 
                     }
+
                 }
                 if(pluginFiles.isEmpty())
                 {

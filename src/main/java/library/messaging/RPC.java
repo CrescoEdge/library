@@ -1,4 +1,5 @@
-package io.cresco.library.messaging;
+package library.messaging;
+
 
 
 import io.cresco.library.plugin.PluginBuilder;
@@ -21,10 +22,10 @@ public class RPC {
     /** Maximum iterations to check for RPC return message */
     private static final int MAX_INTERVALS = 300;
     /** Cresco logger */
-    private final CLogger logger;
+    private CLogger logger;
     /** Communication channel */
     private Map<String, MsgEvent> rpcMap;
-    private final AtomicBoolean lock = new AtomicBoolean();
+    private AtomicBoolean lock = new AtomicBoolean();
 
 
     private PluginBuilder plugin;

@@ -1,4 +1,4 @@
-package io.cresco.library.utilities;
+package library.utilities;
 
 
 import io.cresco.library.plugin.PluginBuilder;
@@ -25,7 +25,7 @@ public class CLogger {
 
 
     private Level level;
-    private final String issuingClassName;
+    private String issuingClassName;
     private String baseClassName;
     private PluginBuilder pluginBuilder;
     private Logger logService;

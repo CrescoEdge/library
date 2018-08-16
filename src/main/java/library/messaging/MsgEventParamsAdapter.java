@@ -1,4 +1,4 @@
-package io.cresco.library.messaging;
+package library.messaging;
 
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 import java.util.ArrayList;
@@ -9,7 +9,7 @@ import java.util.Map;
 class MsgEventParamsAdapter extends XmlAdapter<MsgEventParamsAdapter.AdaptedMap, Map<String, String>> {
 
     static class AdaptedMap {
-        final List<Entry> entry = new ArrayList<Entry>();
+        List<Entry> entry = new ArrayList<Entry>();
     }
 
     private static class Entry {
@@ -18,7 +18,7 @@ class MsgEventParamsAdapter extends XmlAdapter<MsgEventParamsAdapter.AdaptedMap,
     }
 
     @Override
-    public Map<String, String> unmarshal(AdaptedMap adaptedMap) {
+    public Map<String, String> unmarshal(AdaptedMap adaptedMap) throws Exception {
         Map<String, String> map = new HashMap<String, String>();
         for(Entry entry : adaptedMap.entry) {
             map.put(entry.key, entry.value);
@@ -27,7 +27,7 @@ class MsgEventParamsAdapter extends XmlAdapter<MsgEventParamsAdapter.AdaptedMap,
     }
 
     @Override
-    public AdaptedMap marshal(Map<String, String> map) {
+    public AdaptedMap marshal(Map<String, String> map) throws Exception {
         AdaptedMap adaptedMap = new AdaptedMap();
         for(Map.Entry<String, String> mapEntry : map.entrySet()) {
             Entry entry = new Entry();

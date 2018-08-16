@@ -1,4 +1,4 @@
-package io.cresco.library.agent;
+package library.agent;
 
 import io.cresco.library.messaging.MsgEvent;
 
@@ -11,13 +11,12 @@ public class AgentState implements Serializable {
     private static final long serialVersionUID = 5117254163782139591L;
 
 
-    public String getRegion() { return controllerState.getRegion();}
-
+    public String getRegion() { return controllerState.getRegion();};
     public String getAgent() { return controllerState.getAgent();}
     public boolean isActive() { return controllerState.isActive(); }
 
 
-    private final ControllerState controllerState;
+    private ControllerState controllerState;
 
     public AgentState(ControllerState controllerState) {
         this.controllerState = controllerState;

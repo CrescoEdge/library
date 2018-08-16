@@ -1,4 +1,4 @@
-package io.cresco.library.metrics;
+package library.metrics;
 
 import com.codahale.metrics.ObjectNameFactory;
 
