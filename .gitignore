@@ -1,7 +1,3 @@
 # Created by .ignore support plugin (hsz.mobi)
-.idea/workspace.xml
+.idea/
 target/
-.gitignore
-.idea/library.iml
-.idea/misc.xml
-.idea/modules.xml
