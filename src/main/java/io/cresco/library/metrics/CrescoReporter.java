@@ -1,4 +1,4 @@
-package library.metrics;
+package io.cresco.library.metrics;
 
 
 import com.codahale.metrics.*;

@@ -1,4 +1,4 @@
-package library.metrics;
+package io.cresco.library.metrics;
 
 /**
  * Copyright 2017 Pivotal Software, Inc.

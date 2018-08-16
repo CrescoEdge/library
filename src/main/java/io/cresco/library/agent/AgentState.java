@@ -1,4 +1,4 @@
-package library.agent;
+package io.cresco.library.agent;
 
 import io.cresco.library.messaging.MsgEvent;
 

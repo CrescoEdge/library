@@ -1,4 +1,4 @@
-package library.plugin;
+package io.cresco.library.plugin;
 
 import io.cresco.library.messaging.MsgEvent;
 
