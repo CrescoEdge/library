@@ -11,3 +11,4 @@ after_success:
   -Dsonar.organization=crescoedgecomputing \
   -Dsonar.host.url=https://sonarcloud.io \
   -Dsonar.login={$sonar.login}
+
