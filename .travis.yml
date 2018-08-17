@@ -8,7 +8,7 @@ script:
 - mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent install sonar:sonar
 
 after_success:
-  mvn deploy --settings travis-travis-settings.xml -DskipTests=true -B
+  mvn deploy --settings travis-settings.xml -DskipTests=true -B
 
 env:
   global:
