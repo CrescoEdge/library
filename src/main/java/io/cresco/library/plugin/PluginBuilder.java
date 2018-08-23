@@ -37,6 +37,9 @@ public class PluginBuilder {
     private RPC rpc;
     private ExecutorService msgInProcessQueue;
 
+    //NMS added no-arg for testing
+    public PluginBuilder(){}
+
     public PluginBuilder(String className, BundleContext context, Map<String,Object> configMap) {
         this(null,className,context,configMap);
     }
