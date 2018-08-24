@@ -37,8 +37,43 @@ public class PluginBuilder {
     private RPC rpc;
     private ExecutorService msgInProcessQueue;
 
-    //NMS added no-arg for testing
+    //NMS added no-arg and builders for testing and flexibility
     public PluginBuilder(){}
+
+    public PluginBuilder agentService(AgentService toAdd){
+        this.agentService = toAdd;
+        return this;
+    }
+
+    public PluginBuilder config(Config toAdd){
+        this.config = toAdd;
+        return this;
+    }
+
+    public PluginBuilder crescoMeterRegistry(CrescoMeterRegistry toAdd){
+        this.crescoMeterRegistry = toAdd;
+        return this;
+    }
+
+    public PluginBuilder baseClassName(String toAdd){
+        this.baseClassName = toAdd;
+        return this;
+    }
+
+    public PluginBuilder executor(Executor toAdd){
+        this.executor = toAdd;
+        return this;
+    }
+
+    public PluginBuilder rpc(RPC toAdd){
+        this.rpc = toAdd;
+        return this;
+    }
+
+    public PluginBuilder msgInProcessQueue(ExecutorService toAdd){
+        this.msgInProcessQueue = toAdd;
+        return this;
+    }
 
     public PluginBuilder(String className, BundleContext context, Map<String,Object> configMap) {
         this(null,className,context,configMap);
