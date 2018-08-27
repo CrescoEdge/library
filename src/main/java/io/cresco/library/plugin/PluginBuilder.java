@@ -75,6 +75,10 @@ public class PluginBuilder {
         return this;
     }
 
+    public void setAgentService(AgentService agentService) {
+        this.agentService = agentService;
+    }
+
     public PluginBuilder(String className, BundleContext context, Map<String,Object> configMap) {
         this(null,className,context,configMap);
     }
