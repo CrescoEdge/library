@@ -30,10 +30,26 @@ public class CLogger {
     private Logger logService;
     private String source;
 
+    static String formatIssuingClassName(String baseClassName, String issuingClassName) {
+        if (issuingClassName == null) {
+            return "";
+        }
+
+        if(baseClassName == null) {
+            return issuingClassName;
+        }
+
+        if (issuingClassName.length() <= baseClassName.length()) {
+            return issuingClassName;
+        } else {
+            return issuingClassName.substring(baseClassName.length() + 1, issuingClassName.length());
+        }
+    }
+
     public CLogger(PluginBuilder pluginBuilder, String baseClassName, String issuingClassName, Level level) {
         this.pluginBuilder = pluginBuilder;
         this.baseClassName = baseClassName;
-        this.issuingClassName = issuingClassName.substring(baseClassName.length() +1, issuingClassName.length()) ;
+        this.issuingClassName = formatIssuingClassName(baseClassName, issuingClassName);
         this.level = level;
 
         if(pluginBuilder.getPluginID() != null) {
