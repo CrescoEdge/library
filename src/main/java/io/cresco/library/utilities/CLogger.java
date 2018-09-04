@@ -23,12 +23,12 @@ public class CLogger {
     }
 
 
-    private Level level;
-    private String issuingClassName;
-    private String baseClassName;
-    private PluginBuilder pluginBuilder;
-    private Logger logService;
-    private String source;
+    protected Level level;
+    protected String issuingClassName;
+    protected String baseClassName;
+    protected PluginBuilder pluginBuilder;
+    protected Logger logService;
+    protected String source;
 
     static String formatIssuingClassName(String baseClassName, String issuingClassName) {
         if (issuingClassName == null) {
@@ -44,6 +44,18 @@ public class CLogger {
         } else {
             return issuingClassName.substring(baseClassName.length() + 1, issuingClassName.length());
         }
+    }
+
+    //NMS Mostly for testing. Passing around PluginBuilders et alii gets old
+    public CLogger(String issuingClassName,Level level){
+        this.baseClassName = issuingClassName;
+        this.issuingClassName = issuingClassName;
+        this.level = level;
+        this.source = issuingClassName;
+        String logIdent = source  + ":" + issuingClassName;
+        logIdent = logIdent.toLowerCase();
+        this.logService = Logger.getLogger(logIdent);
+        this.logService.setLevel(java.util.logging.Level.ALL);
     }
 
     public CLogger(PluginBuilder pluginBuilder, String baseClassName, String issuingClassName, Level level) {
@@ -65,9 +77,6 @@ public class CLogger {
 
         this.logService = Logger.getLogger(logIdent);
         this.logService.setLevel(java.util.logging.Level.ALL);
-
-
-
     }
 
     public void error(String logMessage) {
@@ -108,7 +117,7 @@ public class CLogger {
         trace(replaceBrackets(logMessage, params));
     }
 
-    private java.util.logging.Level convertLevel(Level level) {
+    protected java.util.logging.Level convertLevel(Level level) {
         java.util.logging.Level l2 = null;
 
         /*
@@ -160,7 +169,7 @@ SEVERE  -> ERROR
 
     }
 
-    private String formatClassName(String className) {
+    protected String formatClassName(String className) {
         String newName = "";
         int lastIndex = 0;
         int nextIndex = className.indexOf(".", lastIndex + 1);
@@ -180,7 +189,7 @@ SEVERE  -> ERROR
         this.level = level;
     }
 
-    private String replaceBrackets(String logMessage, Object ... params) {
+    protected String replaceBrackets(String logMessage, Object ... params) {
         int replaced = 0;
         while (logMessage.contains("{}") && replaced < params.length) {
             logMessage = logMessage.replaceFirst("\\{\\}", String.valueOf(params[replaced]));

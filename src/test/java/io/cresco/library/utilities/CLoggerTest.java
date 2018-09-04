@@ -37,6 +37,26 @@ public class CLoggerTest {
         uut = new CLogger(pb,"CLoggerTest","CLoggerTestSetup", CLogger.Level.Trace);
     }
 
+    /*This could probably use more tests*/
+    @Test
+    public void replaceBrackets_shouldWork(){
+        String testString = "{}\n{}\n{}\n{}";
+        assertEquals("a\n1\n1.41\nnull",uut.replaceBrackets(testString,"a",1,1.41,null));
+    }
+
+    @TestFactory
+    public Stream<DynamicTest> replaceBrackets_argCountMismatch(){
+        String testString = "{}\n{}";
+        return Stream.of(
+            DynamicTest.dynamicTest("Too few",
+                    ()-> assertEquals("a\n{}",uut.replaceBrackets(testString,"a"))),
+            DynamicTest.dynamicTest("Too many",
+                    ()-> assertEquals("a\nb",uut.replaceBrackets(testString,"a","b","c"))),
+            DynamicTest.dynamicTest("No arguments",
+                    ()-> assertEquals(testString,uut.replaceBrackets(testString)))
+        );
+    }
+
     @ParameterizedTest
     @MethodSource("getArgs_formatIssuingClassName")
     public void formatIssuingClassName_test(String basename, String issuingName){
@@ -54,6 +74,17 @@ public class CLoggerTest {
                 assertEquals(issuingName,actual);
             }
         }
-
     }
+
+    @TestFactory
+    public Stream<DynamicTest> testConstr_noPluginBuilder(){
+        CLogger t = new CLogger("issuingClass", CLogger.Level.None);
+        return Stream.of(
+        DynamicTest.dynamicTest("Log level set correctly?",()->assertEquals(t.getLogLevel(),CLogger.Level.None)),
+        DynamicTest.dynamicTest("Base class == issuing class?",()->assertEquals(t.issuingClassName,t.baseClassName)),
+        DynamicTest.dynamicTest("source == issuing class?",()->assertEquals(t.issuingClassName,t.source))
+        );
+    }
+
+
 }
