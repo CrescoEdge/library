@@ -1,6 +1,6 @@
-package db.jpa.queryresults;
+package io.cresco.library.db.results;
 
-import globalscheduler.pNode;
+import io.cresco.library.plugin.pNode;
 
 import java.util.HashMap;
 import java.util.Map;

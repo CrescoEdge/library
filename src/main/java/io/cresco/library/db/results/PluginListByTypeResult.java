@@ -1,4 +1,4 @@
-package db.jpa.queryresults;
+package io.cresco.library.db.results;
 
 import java.util.List;
 import java.util.Map;
