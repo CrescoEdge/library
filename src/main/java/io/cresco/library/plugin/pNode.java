@@ -12,7 +12,7 @@ public class pNode {
 	  public String version;
 
 
-	  public List<Map<String, String>> repoServers = null;
+	  public List<Map<String, String>> repoServers;
 
 	  public pNode(String name, String jarfile, String md5, String version)
 	  {
@@ -43,16 +43,16 @@ public class pNode {
 
 	}
 
-	public boolean isEqual (String name, String jarfile, String md5, String version) {
+	/*public boolean isEqual (String name, String jarfile, String md5, String version) {
 
 	      if((this.name.equals(name)) && (this.jarfile.equals(jarfile)) && (this.md5.equals(md5)) && (this.version.equals(version))) {
 	          return true;
           } else {
               return false;
           }
-    }
-
-    @Override
+    }*/
+	
+	@Override
     public boolean equals (Object otherObject) {
 	  	if(otherObject == this) return true;
 	  	if(!(otherObject instanceof pNode)){
@@ -68,7 +68,7 @@ public class pNode {
 	}
 
     public Date getBuildTime() {
-        Date buildDate = null;
+        Date buildDate;
         try {
             String[] versionStr = version.split("\\.");
             String dataStr = versionStr[versionStr.length - 1];

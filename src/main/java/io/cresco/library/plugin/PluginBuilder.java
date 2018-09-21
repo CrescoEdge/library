@@ -1,10 +1,12 @@
 package io.cresco.library.plugin;
 
 import io.cresco.library.agent.AgentService;
+import io.cresco.library.db.results.PluginInventoryResult;
 import io.cresco.library.messaging.MsgEvent;
 import io.cresco.library.messaging.RPC;
 import io.cresco.library.metrics.CrescoMeterRegistry;
 import io.cresco.library.utilities.CLogger;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
@@ -16,15 +18,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.jar.Attributes;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class PluginBuilder {
 
@@ -37,6 +38,7 @@ public class PluginBuilder {
     private RPC rpc;
     private ExecutorService msgInProcessQueue;
 
+    private static CLogger logger = new CLogger("PluginBuilder", CLogger.Level.Trace);
     //NMS added no-arg and builders for testing and flexibility
     public PluginBuilder(){}
 
@@ -235,7 +237,7 @@ public class PluginBuilder {
         try {
             msg = new MsgEvent(type, getRegion(),getAgent(),getPluginID(),dstRegion,dstAgent,dstPlugin,isRegional ,isGlobal);
         } catch(Exception ex) {
-            ex.printStackTrace();
+            logger.error(ExceptionUtils.getStackTrace(ex));
         }
         return msg;
     }
@@ -320,11 +322,12 @@ public class PluginBuilder {
                     }
                 } else {
                         System.out.println("Executor == null " + msg.printHeader() + " plugin: " + getPluginID());
+                        logger.error("Executor == null " + msg.printHeader() + " plugin: " + getPluginID());
                     }
                 }
 
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Exception ex) {
+                logger.error(ExceptionUtils.getStackTrace(ex));
             }
         }
     }
@@ -368,7 +371,7 @@ public class PluginBuilder {
         }
         catch(Exception ex)
         {
-            ex.printStackTrace();
+            logger.error(ExceptionUtils.getStackTrace(ex));
         }
         return version;
     }
@@ -411,7 +414,7 @@ public class PluginBuilder {
         }
         catch(Exception ex)
         {
-            ex.printStackTrace();
+            logger.error(ExceptionUtils.getStackTrace(ex));
 
         }
         return version;
@@ -430,56 +433,34 @@ public class PluginBuilder {
         }
         catch(Exception e)
         {
-            e.printStackTrace();
+            logger.error(ExceptionUtils.getStackTrace(e));
         }
         return jarString;
     }
 
-    public List<Map<String,String>> getPluginInventory(String repoPath) {
-        List<Map<String,String>> pluginFiles = null;
-        try
-        {
-            File folder = new File(repoPath);
-            if(folder.exists())
-            {
-                pluginFiles = new ArrayList<>();
-                File[] listOfFiles = folder.listFiles();
-
-                for (int i = 0; i < listOfFiles.length; i++)
-                {
-                    if (listOfFiles[i].isFile())
-                    {
-                        try{
-                            String jarPath = listOfFiles[i].getAbsolutePath();
-                            String jarFileName = listOfFiles[i].getName();
-                            String pluginName = getPluginName(jarPath);
-                            String pluginMD5 = getJarMD5(jarPath);
-                            String pluginVersion = getPluginVersion(jarPath);
-
-                            Map<String,String> pluginMap = new HashMap<>();
-                            pluginMap.put("pluginname",pluginName);
-                            pluginMap.put("jarfile",jarFileName);
-                            pluginMap.put("md5",pluginMD5);
-                            pluginMap.put("version",pluginVersion);
-                            pluginFiles.add(pluginMap);
-                        } catch(Exception ex) {
-                            ex.printStackTrace();
-                        }
-
-                    }
-
-                }
-                if(pluginFiles.isEmpty())
-                {
-                    pluginFiles = null;
-                }
-            }
+    public Optional<PluginInventoryResult> getPluginInventory(String repoPath) {
+        if(repoPath == null) return Optional.empty();
+        try {
+            Stream<Path> repoDirContents = Files.list(Paths.get(repoPath));
+            List<PluginInventoryResult.InventoryEntry> results = repoDirContents
+                    .filter(Files::isRegularFile)
+                    .map(Path::toAbsolutePath)
+                    .map(dirEntry ->
+                            new PluginInventoryResult.InventoryEntry(
+                                    getPluginName(dirEntry.toString()),/*plugin name*/
+                                    dirEntry.getFileName().toString(),/*jar file name*/
+                                    getJarMD5(dirEntry.toString()),/*md5*/
+                                    getPluginVersion(dirEntry.toString()) /*plugin version*/
+                            )
+                    )
+                    .collect(Collectors.toList());
+            return Optional.of(new PluginInventoryResult(results));
+        } catch (Exception ex) {
+            String errorMessage = "getPluginInventory: Could not list contents of repo directory " +
+                    "{}: {}";
+            logger.error(String.format(errorMessage, repoPath, ex.getMessage()));
+            return Optional.empty();
         }
-        catch(Exception ex)
-        {
-            pluginFiles = null;
-        }
-        return pluginFiles;
     }
 
 }
