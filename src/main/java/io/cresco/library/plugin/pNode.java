@@ -51,7 +51,7 @@ public class pNode {
               return false;
           }
     }*/
-	
+
 	@Override
     public boolean equals (Object otherObject) {
 	  	if(otherObject == this) return true;
