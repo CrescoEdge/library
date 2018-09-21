@@ -21,11 +21,8 @@ public class AgentRecord {
     @JoinColumn(name="region_id")
     private RegionRecord region;
 
-    @ElementCollection
-    private Map<String,String> recordParams = new HashMap<>();
 
-    protected AgentRecord() {
-    }
+    protected AgentRecord() {}
 
     public long getId() {
         return id;
@@ -47,11 +44,4 @@ public class AgentRecord {
         this.region = region;
     }
 
-    public Map<String, String> getRecordParams() {
-        return recordParams;
-    }
-
-    public void setRecordParams(Map<String, String> recordParams) {
-        this.recordParams = recordParams;
-    }
 }

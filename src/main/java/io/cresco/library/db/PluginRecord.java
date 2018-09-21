@@ -25,10 +25,6 @@ public class PluginRecord {
     @Column(name="plugin_name")
     private String name;
 
-    @ElementCollection
-    private Map<String,String> recordParams = new HashMap<>();
-
-
     protected PluginRecord(){}
 
     public Long getId() {
@@ -59,11 +55,4 @@ public class PluginRecord {
         this.name = name;
     }
 
-    public Map<String, String> getRecordParams() {
-        return recordParams;
-    }
-
-    public void setRecordParams(Map<String, String> recordParams) {
-        this.recordParams = recordParams;
-    }
 }

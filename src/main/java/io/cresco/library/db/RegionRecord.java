@@ -15,9 +15,6 @@ public class RegionRecord {
     @Column(name="region_name")
     private String name;
 
-    @ElementCollection
-    private Map<String,String> recordParams = new HashMap<>();
-
     protected RegionRecord(){}
 
     public Long getId() {
@@ -32,11 +29,4 @@ public class RegionRecord {
         this.name = name;
     }
 
-    public Map<String, String> getRecordParams() {
-        return recordParams;
-    }
-
-    public void setRecordParams(Map<String, String> recordParams) {
-        this.recordParams = recordParams;
-    }
 }
