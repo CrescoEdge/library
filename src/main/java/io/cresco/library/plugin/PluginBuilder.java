@@ -12,6 +12,7 @@ import org.osgi.framework.ServiceReference;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -438,8 +439,8 @@ public class PluginBuilder {
         return jarString;
     }
 
-    public Optional<PluginInventoryResult> getPluginInventory(String repoPath) {
-        if(repoPath == null) return Optional.empty();
+    public PluginInventoryResult getPluginInventory(String repoPath) throws IOException {
+        if(repoPath == null) throw new IllegalArgumentException("getPluginInvetory: argument must not be null");
         try {
             Stream<Path> repoDirContents = Files.list(Paths.get(repoPath));
             List<PluginInventoryResult.InventoryEntry> results = repoDirContents
@@ -454,12 +455,14 @@ public class PluginBuilder {
                             )
                     )
                     .collect(Collectors.toList());
-            return Optional.of(new PluginInventoryResult(results));
-        } catch (Exception ex) {
+            if(results.size() == 0) logger.warn(String.format("Repo path does not appear to " +
+                    "contain any JARs: %s",repoPath));
+            return new PluginInventoryResult(results);
+        } catch (IOException ex) {
             String errorMessage = "getPluginInventory: Could not list contents of repo directory " +
-                    "{}: {}";
+                    "%s: %s";
             logger.error(String.format(errorMessage, repoPath, ex.getMessage()));
-            return Optional.empty();
+            throw ex;
         }
     }
 
