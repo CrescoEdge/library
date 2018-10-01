@@ -1,7 +1,6 @@
 package io.cresco.library.plugin;
 
 import io.cresco.library.agent.AgentService;
-import io.cresco.library.db.results.PluginInventoryResult;
 import io.cresco.library.messaging.MsgEvent;
 import io.cresco.library.messaging.RPC;
 import io.cresco.library.metrics.CrescoMeterRegistry;
@@ -439,31 +438,43 @@ public class PluginBuilder {
         return jarString;
     }
 
-    public PluginInventoryResult getPluginInventory(String repoPath) throws IOException {
-        if(repoPath == null) throw new IllegalArgumentException("getPluginInvetory: argument must not be null");
-        try {
-            Stream<Path> repoDirContents = Files.list(Paths.get(repoPath));
-            List<PluginInventoryResult.InventoryEntry> results = repoDirContents
-                    .filter(Files::isRegularFile)
-                    .map(Path::toAbsolutePath)
-                    .map(dirEntry ->
-                            new PluginInventoryResult.InventoryEntry(
-                                    getPluginName(dirEntry.toString()),/*plugin name*/
-                                    dirEntry.getFileName().toString(),/*jar file name*/
-                                    getJarMD5(dirEntry.toString()),/*md5*/
-                                    getPluginVersion(dirEntry.toString()) /*plugin version*/
-                            )
-                    )
-                    .collect(Collectors.toList());
-            if(results.isEmpty()) logger.warn(String.format("Repo path does not appear to " +
-                    "contain any JARs: %s",repoPath));
-            return new PluginInventoryResult(results.toArray(new PluginInventoryResult.InventoryEntry[0]));
-        } catch (IOException ex) {
+    public List<Map<String,String>> getPluginInventory(String repoPath) throws IOException {
+        List<Map<String,String>> pluginFiles = null;
+        try
+        {
+            File folder = new File(repoPath);
+            if(folder.exists()) {
+                pluginFiles = new ArrayList<>();
+                File[] listOfFiles = folder.listFiles();
+
+                for (int i = 0; i < listOfFiles.length; i++) {
+                    if (listOfFiles[i].isFile()) {
+                        try {
+                            String jarPath = listOfFiles[i].getAbsolutePath();
+                            String jarFileName = listOfFiles[i].getName();
+                            String pluginName = getPluginName(jarPath);
+                            String pluginMD5 = getJarMD5(jarPath);
+                            String pluginVersion = getPluginVersion(jarPath);
+
+                            Map<String, String> pluginMap = new HashMap<>();
+                            pluginMap.put("pluginname", pluginName);
+                            pluginMap.put("jarfile", jarFileName);
+                            pluginMap.put("md5", pluginMD5);
+                            pluginMap.put("version", pluginVersion);
+                            pluginFiles.add(pluginMap);
+                        } catch(Exception ex) {
+                            logger.error(ExceptionUtils.getStackTrace(ex));
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) {
             String errorMessage = "getPluginInventory: Could not list contents of repo directory " +
                     "%s: %s";
-            logger.error(String.format(errorMessage, repoPath, ex.getMessage()));
-            throw ex;
+            logger.error(ExceptionUtils.getStackTrace(ex));
+            pluginFiles = null;
         }
+        return pluginFiles;
     }
 
 }

@@ -1,6 +1,5 @@
 package io.cresco.library.plugin;
 
-import io.cresco.library.db.results.PluginInventoryResult;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
