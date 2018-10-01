@@ -455,9 +455,9 @@ public class PluginBuilder {
                             )
                     )
                     .collect(Collectors.toList());
-            if(results.size() == 0) logger.warn(String.format("Repo path does not appear to " +
+            if(results.isEmpty()) logger.warn(String.format("Repo path does not appear to " +
                     "contain any JARs: %s",repoPath));
-            return new PluginInventoryResult(results);
+            return new PluginInventoryResult(results.toArray(new PluginInventoryResult.InventoryEntry[0]));
         } catch (IOException ex) {
             String errorMessage = "getPluginInventory: Could not list contents of repo directory " +
                     "%s: %s";

@@ -21,6 +21,14 @@ public class AgentRecord {
     @JoinColumn(name="region_id")
     private RegionRecord region;
 
+    @Column
+    private String location;
+
+    @Column
+    private String platform;
+
+    @Column
+    private String environment;
 
     protected AgentRecord() {}
 
@@ -44,4 +52,27 @@ public class AgentRecord {
         this.region = region;
     }
 
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getPlatform() {
+        return platform;
+    }
+
+    public void setPlatform(String platform) {
+        this.platform = platform;
+    }
+
+    public String getEnvironment() {
+        return environment;
+    }
+
+    public void setEnvironment(String environment) {
+        this.environment = environment;
+    }
 }

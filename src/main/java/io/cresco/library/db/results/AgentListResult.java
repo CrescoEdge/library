@@ -3,12 +3,12 @@ package io.cresco.library.db.results;
 import java.util.List;
 
 public class AgentListResult {
-    List<ListEntry> agents;
-    public AgentListResult(List<ListEntry> toAdd){
+    ListEntry[] agents;
+    public AgentListResult(ListEntry[]  toAdd){
         this.agents = toAdd;
     }
 
-    public List<ListEntry> getAgents() {
+    public ListEntry[]  getAgents() {
         return agents;
     }
 

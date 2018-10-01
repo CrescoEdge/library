@@ -25,6 +25,9 @@ public class PluginRecord {
     @Column(name="plugin_name")
     private String name;
 
+    @Column(name="assigned_pluginid")
+    private String assignedPluginId;
+
     protected PluginRecord(){}
 
     public Long getId() {

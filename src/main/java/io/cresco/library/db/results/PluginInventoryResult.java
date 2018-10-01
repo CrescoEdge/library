@@ -6,13 +6,13 @@ import java.util.List;
 
 public class PluginInventoryResult {
 
-    private List<InventoryEntry> plugins;
+    private InventoryEntry[] plugins;
 
-    public PluginInventoryResult(List<InventoryEntry> toAdd){
+    public PluginInventoryResult(InventoryEntry[] toAdd){
         plugins = toAdd;
     }
 
-    public List<InventoryEntry> getPlugins() {
+    public InventoryEntry[] getPlugins() {
         return plugins;
     }
 
@@ -27,6 +27,22 @@ public class PluginInventoryResult {
             this.pluginName = pluginName;
             this.md5 = md5;
             this.version = version;
+        }
+
+        public String getJarFileName() {
+            return jarFileName;
+        }
+
+        public String getPluginName() {
+            return pluginName;
+        }
+
+        public String getMd5() {
+            return md5;
+        }
+
+        public String getVersion() {
+            return version;
         }
     }
 
