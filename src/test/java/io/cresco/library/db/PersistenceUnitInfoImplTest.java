@@ -46,6 +46,7 @@ public class PersistenceUnitInfoImplTest {
          print(case)
 
      */
+
     private PersistenceUnitInfoBuilder mybuilder;
 
     @BeforeEach

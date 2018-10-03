@@ -22,10 +22,10 @@ public class PluginRecord {
     @JoinColumn(name="region_id")
     private RegionRecord region;
 
-    @Column(name="plugin_name")
+    @Column
     private String name;
 
-    @Column(name="assigned_pluginid")
+    @Column
     private String assignedPluginId;
 
     protected PluginRecord(){}
