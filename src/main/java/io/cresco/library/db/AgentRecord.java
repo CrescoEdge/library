@@ -48,6 +48,7 @@ public class AgentRecord {
     @Column
     private String msgInUrl;
 
+
     protected AgentRecord() {}
 
     public long getId() {
@@ -82,9 +83,6 @@ public class AgentRecord {
         return msgInUrl;
     }
 
-    public void setId(long id) {
-        this.id = id;
-    }
 
     public void setName(String name) {
         this.name = name;

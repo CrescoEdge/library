@@ -1,6 +1,7 @@
 package io.cresco.library.db;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,10 +10,15 @@ import java.util.Map;
 @Table(name="plugin"
         ,uniqueConstraints = {@UniqueConstraint(columnNames={"plugin_name"})})
 public class PluginRecord {
-
+    public enum PluginStatus{
+        STOPPED,
+        LOADING,
+        LOADED,
+        RUNNING
+    }
     @Id
     @GeneratedValue
-    private Long id;
+    private long id;
 
     @ManyToOne
     @JoinColumn(name="agent_id")
@@ -26,9 +32,27 @@ public class PluginRecord {
     private String name;
 
     @Column
-    private String assignedPluginId;
+    private String assignedToPluginSlot;
 
-    protected PluginRecord(){}
+    @Column
+    private PluginStatus status;
+
+    @Column
+    private String md5;
+
+    @Column
+    private String jarFileName;
+
+    @Column
+    private String version;
+
+    @Column
+    private LocalDateTime lastUpdated;
+
+    @Column
+    private String compressedPluginConfig;
+
+    public PluginRecord() {}
 
     public Long getId() {
         return id;
@@ -38,24 +62,79 @@ public class PluginRecord {
         return agent;
     }
 
-    public void setAgent(AgentRecord agent) {
-        this.agent = agent;
-    }
-
     public RegionRecord getRegion() {
         return region;
-    }
-
-    public void setRegion(RegionRecord region) {
-        this.region = region;
     }
 
     public String getName() {
         return name;
     }
 
+    public String getAssignedToPluginSlot() {
+        return assignedToPluginSlot;
+    }
+
+    public PluginStatus getStatus() {
+        return status;
+    }
+
+    public String getMd5() {
+        return md5;
+    }
+
+    public String getJarFileName() {
+        return jarFileName;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public LocalDateTime getLastUpdated() {
+        return lastUpdated;
+    }
+
+    public String getCompressedPluginConfig() {
+        return compressedPluginConfig;
+    }
+
+    public void setAgent(AgentRecord agent) {
+        this.agent = agent;
+    }
+
+    public void setRegion(RegionRecord region) {
+        this.region = region;
+    }
+
     public void setName(String name) {
         this.name = name;
     }
 
+    public void setAssignedToPluginSlot(String assignedToPluginSlot) {
+        this.assignedToPluginSlot = assignedToPluginSlot;
+    }
+
+    public void setStatus(PluginStatus status) {
+        this.status = status;
+    }
+
+    public void setMd5(String md5) {
+        this.md5 = md5;
+    }
+
+    public void setJarFileName(String jarFileName) {
+        this.jarFileName = jarFileName;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public void setLastUpdated(LocalDateTime lastUpdated) {
+        this.lastUpdated = lastUpdated;
+    }
+
+    public void setCompressedPluginConfig(String compressedPluginConfig) {
+        this.compressedPluginConfig = compressedPluginConfig;
+    }
 }
