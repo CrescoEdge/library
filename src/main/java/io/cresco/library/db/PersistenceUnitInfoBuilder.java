@@ -14,7 +14,7 @@ public class PersistenceUnitInfoBuilder {
             ,persistenceProviderClassName;
     private PersistenceUnitTransactionType persistenceUnitTransactionType =
             PersistenceUnitTransactionType.RESOURCE_LOCAL;
-    DataSource jtaDataSource, nonJtaDataSource;
+    private DataSource jtaDataSource, nonJtaDataSource;
     private List<String> mappingFileNames = new ArrayList<>();
     private List<String> managedClassNames = new ArrayList<>();
     private List<URL> jarFileUrls = new ArrayList<>();
