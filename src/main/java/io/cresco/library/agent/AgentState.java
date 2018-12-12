@@ -17,7 +17,7 @@ public class AgentState implements Serializable {
     public boolean isActive() { return controllerState.isActive(); }
 
 
-    private ControllerState controllerState;
+    private volatile ControllerState controllerState;
 
     public AgentState(ControllerState controllerState) {
         this.controllerState = controllerState;

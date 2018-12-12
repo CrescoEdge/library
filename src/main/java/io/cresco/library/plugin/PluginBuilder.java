@@ -28,12 +28,12 @@ import java.util.jar.Manifest;
 
 public class PluginBuilder {
 
-    private AgentService agentService;
+    private volatile AgentService agentService;
     private Config config;
     private CrescoMeterRegistry crescoMeterRegistry;
     private String baseClassName;
     private Executor executor;
-    private boolean isActive;
+    private volatile boolean isActive;
     private RPC rpc;
     private ExecutorService msgInProcessQueue;
 
