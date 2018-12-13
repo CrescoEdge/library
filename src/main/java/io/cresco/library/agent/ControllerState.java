@@ -1,17 +1,19 @@
 package io.cresco.library.agent;
 
 
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ControllerState {
 
-	private volatile Mode currentMode  = Mode.PRE_INIT;
-	private volatile String localRegion;
-	private volatile String localAgent;
-	private volatile String currentDesc;
-	private volatile String globalAgent;
-	private volatile String globalRegion;
-	private volatile String regionalAgent;
-	private volatile String regionalRegion;
+	private Mode currentMode  = Mode.PRE_INIT;
+	private String localRegion;
+	private String localAgent;
+	private String currentDesc;
+	private String globalAgent;
+	private String globalRegion;
+	private String regionalAgent;
+	private String regionalRegion;
+	private AtomicBoolean lockMode = new AtomicBoolean();
 
 
 	public ControllerState() {
@@ -19,17 +21,15 @@ public class ControllerState {
 	}
 
 	public boolean isActive() {
-        return (currentMode == Mode.AGENT) || (currentMode == Mode.GLOBAL) || (currentMode == Mode.REGION_GLOBAL);
+		synchronized (lockMode) {
+			return (currentMode == Mode.AGENT) || (currentMode == Mode.GLOBAL) || (currentMode == Mode.REGION_GLOBAL);
+		}
 	}
 
-	/*
-	public void setAgent(String agentName) { this.localAgent = agentName; }
-
-	public void setRegion(String regionName) { this.localRegion = regionName; }
-	*/
-
 	public String getControllerState() {
-		return currentMode.toString();
+		synchronized (lockMode) {
+			return currentMode.toString();
+		}
 	}
 
 	public String getCurrentDesc() {
@@ -39,8 +39,10 @@ public class ControllerState {
 	public boolean isRegionalController() {
 		boolean isRC = false;
 
-		if((currentMode.toString().startsWith("REGION")) || isGlobalController()) {
-			isRC = true;
+		synchronized (lockMode) {
+			if ((currentMode.toString().startsWith("REGION")) || isGlobalController()) {
+				isRC = true;
+			}
 		}
 		return isRC;
 	}
@@ -48,8 +50,10 @@ public class ControllerState {
 	public boolean isGlobalController() {
 		boolean isGC = false;
 
-		if(currentMode.toString().startsWith("GLOBAL")) {
-			isGC = true;
+		synchronized (lockMode) {
+			if (currentMode.toString().startsWith("GLOBAL")) {
+				isGC = true;
+			}
 		}
 		return isGC;
 	}
@@ -95,87 +99,105 @@ public class ControllerState {
 	}
 
 	public void setPreInit() {
-		currentMode = Mode.PRE_INIT;
-		currentDesc = null;
-		localAgent = null;
-		localRegion = null;
-		regionalRegion = null;
-		regionalAgent = null;
-		globalAgent = null;
-		globalRegion = null;
+		synchronized (lockMode) {
+			currentMode = Mode.PRE_INIT;
+			currentDesc = null;
+			localAgent = null;
+			localRegion = null;
+			regionalRegion = null;
+			regionalAgent = null;
+			globalAgent = null;
+			globalRegion = null;
+		}
 	}
 
 	public void setAgentSuccess(String regionalRegion, String regionalAgent, String desc) {
-		currentMode = Mode.AGENT;
-		currentDesc = desc;
-		this.globalAgent = null;
-		this.globalRegion = null;
-		this.regionalRegion = regionalRegion;
-		this.regionalAgent = regionalAgent;
+		synchronized (lockMode) {
+			currentMode = Mode.AGENT;
+			currentDesc = desc;
+			this.globalAgent = null;
+			this.globalRegion = null;
+			this.regionalRegion = regionalRegion;
+			this.regionalAgent = regionalAgent;
+		}
 	}
 
 	public void setAgentInit(String regionName, String agentName, String desc) {
-		currentMode = Mode.AGENT_INIT;
-		currentDesc = desc;
-		this.localAgent = agentName;
-		this.localRegion = regionName;
-		regionalRegion = null;
-		regionalAgent = null;
-		globalAgent = null;
-		globalRegion = null;
+		synchronized (lockMode) {
+			currentMode = Mode.AGENT_INIT;
+			currentDesc = desc;
+			this.localAgent = agentName;
+			this.localRegion = regionName;
+			regionalRegion = null;
+			regionalAgent = null;
+			globalAgent = null;
+			globalRegion = null;
+		}
 
 	}
 
 	public void setRegionInit(String regionName, String agentName, String desc) {
-		currentMode = Mode.REGION_INIT;
-		currentDesc = desc;
-		localRegion = regionName;
-		localAgent = agentName;
-		regionalRegion = null;
-		regionalAgent = null;
-		globalAgent = null;
-		globalRegion = null;
+		synchronized (lockMode) {
+			currentMode = Mode.REGION_INIT;
+			currentDesc = desc;
+			localRegion = regionName;
+			localAgent = agentName;
+			regionalRegion = null;
+			regionalAgent = null;
+			globalAgent = null;
+			globalRegion = null;
+		}
 	}
 
 	public void setRegionGlobalInit(String desc) {
-		currentMode = Mode.REGION_GLOBAL_INIT;
-		currentDesc = desc;
-		this.globalAgent = null;
-		this.globalRegion = null;
-		this.regionalAgent = localAgent;
-		this.regionalRegion = localRegion;
+		synchronized (lockMode) {
+			currentMode = Mode.REGION_GLOBAL_INIT;
+			currentDesc = desc;
+			this.globalAgent = null;
+			this.globalRegion = null;
+			this.regionalAgent = localAgent;
+			this.regionalRegion = localRegion;
+		}
 	}
 
 	public void setRegionFailed(String desc) {
-		currentMode = Mode.REGION_FAILED;
-		currentDesc = desc;
-		this.globalAgent = null;
-		this.globalRegion = null;
-		this.regionalAgent = null;
-		this.regionalRegion = null;
+		synchronized (lockMode) {
+			currentMode = Mode.REGION_FAILED;
+			currentDesc = desc;
+			this.globalAgent = null;
+			this.globalRegion = null;
+			this.regionalAgent = null;
+			this.regionalRegion = null;
+		}
 	}
 
 	public void setGlobalSuccess(String desc) {
-		currentMode = Mode.GLOBAL;
-		currentDesc = desc;
-		this.regionalAgent = localAgent;
-		this.regionalRegion = localRegion;
-		this.regionalAgent = localAgent;
-		this.regionalRegion = localRegion;
+		synchronized (lockMode) {
+			currentMode = Mode.GLOBAL;
+			currentDesc = desc;
+			this.regionalAgent = localAgent;
+			this.regionalRegion = localRegion;
+			this.regionalAgent = localAgent;
+			this.regionalRegion = localRegion;
+		}
 	}
 
 	public void setRegionalGlobalSuccess(String globalRegion, String globalAgent, String desc) {
-		currentMode = Mode.REGION_GLOBAL;
-		currentDesc = desc;
-		this.globalRegion = globalRegion;
-		this.globalAgent = globalAgent;
+		synchronized (lockMode) {
+			currentMode = Mode.REGION_GLOBAL;
+			currentDesc = desc;
+			this.globalRegion = globalRegion;
+			this.globalAgent = globalAgent;
+		}
 	}
 
 	public void setRegionalGlobalFailed(String desc) {
-		currentMode = Mode.REGION_GLOBAL_FAILED;
-		currentDesc = desc;
-		globalAgent = null;
-		globalRegion = null;
+		synchronized (lockMode) {
+			currentMode = Mode.REGION_GLOBAL_FAILED;
+			currentDesc = desc;
+			globalAgent = null;
+			globalRegion = null;
+		}
 	}
 
 	public enum Mode {

@@ -22,18 +22,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.Attributes;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
 
 public class PluginBuilder {
 
-    private volatile AgentService agentService;
+    private AgentService agentService;
     private Config config;
     private CrescoMeterRegistry crescoMeterRegistry;
     private String baseClassName;
     private Executor executor;
-    private volatile boolean isActive;
+    private AtomicBoolean isActive = new AtomicBoolean(false);
     private RPC rpc;
     private ExecutorService msgInProcessQueue;
 
@@ -202,8 +203,8 @@ public class PluginBuilder {
         this.executor = executor;
     }
 
-    public boolean isActive() { return this.isActive; }
-    public void setIsActive(boolean isActive) { this.isActive = isActive; }
+    public boolean isActive() { return this.isActive.get(); }
+    public void setIsActive(boolean isActive) { this.isActive.set(isActive); }
 
     protected class MessageProcessor implements Runnable {
         /** Incoming MsgEvent object */
