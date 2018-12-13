@@ -4,14 +4,14 @@ package io.cresco.library.agent;
 
 public class ControllerState {
 
-	private Mode currentMode  = Mode.PRE_INIT;
-	private String localRegion;
-	private String localAgent;
-	private String currentDesc;
-	private String globalAgent;
-	private String globalRegion;
-	private String regionalAgent;
-	private String regionalRegion;
+	private volatile Mode currentMode  = Mode.PRE_INIT;
+	private volatile String localRegion;
+	private volatile String localAgent;
+	private volatile String currentDesc;
+	private volatile String globalAgent;
+	private volatile String globalRegion;
+	private volatile String regionalAgent;
+	private volatile String regionalRegion;
 
 
 	public ControllerState() {
