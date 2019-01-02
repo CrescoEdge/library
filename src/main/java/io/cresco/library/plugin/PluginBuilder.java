@@ -86,6 +86,7 @@ public class PluginBuilder {
             identString = getPluginID();
         }
 
+
         this.crescoMeterRegistry = new CrescoMeterRegistry(this,identString);
 
         this.rpc = new RPC(this);
