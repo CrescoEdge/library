@@ -19,4 +19,5 @@ public interface AgentService {
     ObjectMessage createObjectMessage();
     StreamMessage createStreamMessage();
     TextMessage createTextMessage();
+
 }
