@@ -5,8 +5,7 @@ import io.cresco.library.data.TopicType;
 import io.cresco.library.messaging.MsgEvent;
 import io.cresco.library.utilities.CLogger;
 
-import javax.jms.MessageListener;
-import javax.jms.TextMessage;
+import javax.jms.*;
 
 public interface AgentService {
 	AgentState getAgentState();
@@ -14,5 +13,10 @@ public interface AgentService {
 	void setLogLevel(String logId, CLogger.Level level);
 	String addMessageListener(TopicType topicType, MessageListener messageListener, String selectorString);
 	boolean sendMessage(TopicType topicType, TextMessage textMessage);
-
+    BytesMessage createBytesMessage();
+    MapMessage createMapMessage();
+    Message createMessage();
+    ObjectMessage createObjectMessage();
+    StreamMessage createStreamMessage();
+    TextMessage createTextMessage();
 }
