@@ -98,6 +98,12 @@
         <version>1.1.1</version>
     </dependency>
 
+    <dependency>
+        <groupId>org.apache.geronimo.specs</groupId>
+        <artifactId>geronimo-j2ee-management_1.1_spec</artifactId>
+        <version>1.0.1</version>
+    </dependency>
+
 
 </dependencies>
 
@@ -129,6 +135,7 @@
                     <Import-Package>*;resolution:=optional</Import-Package>
                     <Embed-Dependency>!org.osgi.*;*</Embed-Dependency>
                     <Export-Package>
+                        javax.*;
                         org.apache.avro.*;
                         org.tukaani.*;
                         org.apache.commons.compress.*;
