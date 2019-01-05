@@ -8,6 +8,7 @@ import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.reflect.ReflectDatumWriter;
 import org.apache.avro.specific.SpecificDatumWriter;
 
+import javax.jms.Topic;
 import java.io.ByteArrayOutputStream;
 
 public class CDPUtils {

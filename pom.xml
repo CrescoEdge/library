@@ -46,6 +46,7 @@
     <maven.compiler.version>3.8.0</maven.compiler.version>
     <maven.bundle.compiler.version>4.0.0</maven.bundle.compiler.version>
     <micrometer.version>1.0.8</micrometer.version>
+    <avro.version>1.8.2</avro.version>
 
 </properties>
 
@@ -82,7 +83,7 @@
     <dependency>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro</artifactId>
-        <version>1.8.2</version>
+        <version>${avro.version}</version>
         <exclusions>
             <exclusion>
                 <groupId>org.slf4j</groupId>
@@ -91,6 +92,11 @@
         </exclusions>
     </dependency>
 
+    <dependency>
+        <groupId>org.apache.geronimo.specs</groupId>
+        <artifactId>geronimo-jms_1.1_spec</artifactId>
+        <version>1.1.1</version>
+    </dependency>
 
 
 </dependencies>

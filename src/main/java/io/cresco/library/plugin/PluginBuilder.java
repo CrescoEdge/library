@@ -37,6 +37,7 @@ public class PluginBuilder {
     private AtomicBoolean isActive = new AtomicBoolean(false);
     private RPC rpc;
     private ExecutorService msgInProcessQueue;
+    private DataPlaneService dataPlaneService;
 
     public PluginBuilder(String className, BundleContext context, Map<String,Object> configMap) {
         this(null,className,context,configMap);
