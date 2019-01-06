@@ -12,7 +12,7 @@ public interface DataPlaneService {
     ObjectMessage createObjectMessage();
     StreamMessage createStreamMessage();
     TextMessage createTextMessage();
-    String createCEP(String inputRecordSchemaString, String inputStreamName, String outputStreamName, String outputStreamAttributesString,String queryString, String outputListString);
+    String createCEP(String inputRecordSchemaString, String inputStreamName, String outputStreamName, String outputStreamAttributesString,String queryString);
     void input(String cepId, String streamName, String jsonPayload);
     boolean removeCEP(String cepId);
 }
