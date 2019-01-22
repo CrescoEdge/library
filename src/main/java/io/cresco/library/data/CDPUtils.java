@@ -107,7 +107,7 @@ public class CDPUtils {
         String returnString = null;
         try {
 
-            Schema schema = ReflectData.get().getSchema(o.getClass());
+            Schema schema = ReflectData.AllowNull.get().getSchema(o.getClass());
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             Encoder encoder = new EncoderFactory().jsonEncoder(schema, outputStream);
             DatumWriter<Object> writer = new ReflectDatumWriter<>(schema);
@@ -126,7 +126,7 @@ public class CDPUtils {
         Schema schema = null;
         try {
 
-            schema = ReflectData.get().getSchema(o.getClass());
+            schema = ReflectData.AllowNull.get().getSchema(o.getClass());
 
         } catch(Exception ex){
             ex.printStackTrace();
@@ -138,7 +138,7 @@ public class CDPUtils {
         String schemaString = null;
         try {
 
-            Schema schema = ReflectData.get().getSchema(o.getClass());
+            Schema schema = ReflectData.AllowNull.get().getSchema(o.getClass());
             schemaString = schema.toString();
 
         } catch(Exception ex){
