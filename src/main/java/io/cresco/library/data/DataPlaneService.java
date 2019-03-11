@@ -1,5 +1,7 @@
 package io.cresco.library.data;
 
+import org.apache.activemq.BlobMessage;
+
 import javax.jms.*;
 
 public interface DataPlaneService {
@@ -12,6 +14,7 @@ public interface DataPlaneService {
     ObjectMessage createObjectMessage();
     StreamMessage createStreamMessage();
     TextMessage createTextMessage();
+    BlobMessage createBlobMessage();
     String createCEP(String inputRecordSchemaString, String inputStreamName, String outputStreamName, String outputStreamAttributesString,String queryString);
     void input(String cepId, String streamName, String jsonPayload);
     boolean removeCEP(String cepId);
