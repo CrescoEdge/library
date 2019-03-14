@@ -3,10 +3,7 @@ package io.cresco.library.messaging;
 import javax.xml.bind.DatatypeConverter;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
@@ -30,6 +27,8 @@ public class MsgEvent {
     private boolean isGlobal = false;
 
     private Map<String, String> params;
+
+    private List<String> fileList;
 
     public MsgEvent() {
 
@@ -62,6 +61,8 @@ public class MsgEvent {
         if(dst_plugin != null) {
             this.params.put("dst_plugin", dst_plugin);
         }
+
+        fileList = new ArrayList<>();
 
     }
 
@@ -269,6 +270,33 @@ public class MsgEvent {
 
     public void setCompressedParam(String key, String value) {
         params.put(key, DatatypeConverter.printBase64Binary(stringCompress(value)));
+    }
+
+    public void addFile(String filePath) {
+        try {
+            fileList.add(filePath);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void clearFileList() {
+        fileList.clear();
+    }
+
+    public void addFiles(List<String> files) {
+        fileList.addAll(files);
+    }
+
+    public List<String> getFileList() {
+        return fileList;
+    }
+
+    public boolean hasFiles() {
+        if(!fileList.isEmpty()) {
+            return true;
+        }
+        return false;
     }
 
     public void setDataParam(String key, byte[] value) {
