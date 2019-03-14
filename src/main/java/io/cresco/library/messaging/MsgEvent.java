@@ -8,9 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -32,9 +30,6 @@ public class MsgEvent {
     private boolean isGlobal = false;
 
     private Map<String, String> params;
-
-
-
 
     public MsgEvent() {
 
@@ -67,6 +62,7 @@ public class MsgEvent {
         if(dst_plugin != null) {
             this.params.put("dst_plugin", dst_plugin);
         }
+
     }
 
     public MsgEvent(Type msgType, String msgRegion, String msgAgent, String msgPlugin, String msgBody) {
