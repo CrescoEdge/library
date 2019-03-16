@@ -26,6 +26,8 @@ public class MsgEvent {
     private boolean isRegional = false;
     private boolean isGlobal = false;
 
+    private boolean hasOutgoingFiles = false;
+
     private Map<String, String> params;
 
     private List<String> fileList;
@@ -62,7 +64,7 @@ public class MsgEvent {
             this.params.put("dst_plugin", dst_plugin);
         }
 
-        fileList = new ArrayList<>();
+        //fileList = new ArrayList<>();
 
     }
 
@@ -274,6 +276,10 @@ public class MsgEvent {
 
     public void addFile(String filePath) {
         try {
+            if(fileList == null) {
+                fileList = new ArrayList<>();
+                hasOutgoingFiles = true;
+            }
             fileList.add(filePath);
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -281,10 +287,17 @@ public class MsgEvent {
     }
 
     public void clearFileList() {
-        fileList.clear();
+        if(fileList != null) {
+            fileList.clear();
+        }
+        hasOutgoingFiles = false;
     }
 
     public void addFiles(List<String> files) {
+        if(fileList == null) {
+            fileList = new ArrayList<>();
+            hasOutgoingFiles = true;
+        }
         fileList.addAll(files);
     }
 
@@ -293,11 +306,12 @@ public class MsgEvent {
     }
 
     public boolean hasFiles() {
-        if(!fileList.isEmpty()) {
-            return true;
-        }
-        return false;
+        //if(!fileList.isEmpty()) {
+        //    return true;
+        //}
+        return hasOutgoingFiles;
     }
+
 
     public void setDataParam(String key, byte[] value) {
         params.put(key, DatatypeConverter.printBase64Binary(value));
