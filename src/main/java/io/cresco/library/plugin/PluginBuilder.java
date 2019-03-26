@@ -410,12 +410,52 @@ public class PluginBuilder {
             if(checkPath.toFile().exists()) {
                 inputStream = new FileInputStream(filePath);
             } else {
-
                 URL fileURL = getClass().getClassLoader().getResource(filePath);
                 if(fileURL != null) {
                     inputStream = getClass().getClassLoader().getResourceAsStream(fileURL.getPath());
                 }
             }
+
+            if(inputStream != null) {
+
+                MessageDigest digest = MessageDigest.getInstance("MD5");
+
+                //Create byte array to read data in chunks
+                byte[] byteArray = new byte[1024];
+                int bytesCount = 0;
+
+                //Read file data and update in message digest
+                while ((bytesCount = inputStream.read(byteArray)) != -1) {
+                    digest.update(byteArray, 0, bytesCount);
+                }
+                ;
+
+                //close the stream; We don't need it now.
+                inputStream.close();
+
+                //Get the hash's bytes
+                byte[] bytes = digest.digest();
+
+                //This bytes[] has bytes in decimal format;
+                //Convert it to hexadecimal format
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < bytes.length; i++) {
+                    sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
+                }
+
+                hashString = sb.toString();
+            }
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        //return complete hash
+        return hashString;
+    }
+
+    public String getMD5(InputStream inputStream) {
+        String hashString = null;
+        try {
 
             if(inputStream != null) {
 
