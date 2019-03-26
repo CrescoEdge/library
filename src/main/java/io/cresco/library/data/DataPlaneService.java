@@ -29,7 +29,7 @@ public interface DataPlaneService {
     public FileObject createFileObject(String fileName);
     public Map<String,String> splitFile(String dataName, String fileName);
     public Map<String,String> streamToSplitFile(String dataName, InputStream is);
-    public String getMD5(String filePath);
+    //public String getMD5(String filePath);
     public void mergeFiles(List<File> files, File into, boolean deleteParts);
     public List<FileObject> getFileObjectsFromString(String fileObjectsString);
     public String generateFileObjectsString(List<FileObject> fileObjects);

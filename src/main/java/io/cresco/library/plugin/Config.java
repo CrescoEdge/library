@@ -32,6 +32,7 @@ public class Config {
     public Boolean getBooleanParam(String param) {
 
         String env = System.getProperty(param);
+
         if(env == null) {
             env = System.getenv(ENV_PREFIX + param);
         }
