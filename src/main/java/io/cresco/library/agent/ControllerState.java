@@ -200,17 +200,53 @@ public class ControllerState {
 		}
 	}
 
+	public void setStandaloneInit(String agent, String desc) {
+		synchronized (lockMode) {
+			currentMode = Mode.STANDALONE_INIT;
+			currentDesc = desc;
+			localAgent = agent;
+			localRegion = null;
+			regionalRegion = null;
+			regionalAgent = null;
+			globalAgent = null;
+			globalRegion = null;
+		}
+	}
+
+	public void setStandalone(String agent, String desc) {
+		synchronized (lockMode) {
+			currentMode = Mode.STANDALONE;
+			currentDesc = desc;
+			localAgent = agent;
+			localRegion = null;
+			regionalRegion = null;
+			regionalAgent = null;
+			globalAgent = null;
+			globalRegion = null;
+		}
+	}
+
 	public enum Mode {
 		PRE_INIT,
+
+		STANDALONE_INIT,
+		STANDALONE,
+		STANDALONE_FAILED,
+		STANDALONE_SHUTDOWN,
+
 		AGENT_INIT,
 		AGENT,
+		AGENT_FAILED,
 		AGENT_SHUTDOWN,
+
 		REGION_INIT,
 		REGION_FAILED,
+		REGION,
 		REGION_GLOBAL_INIT,
 		REGION_GLOBAL_FAILED,
 		REGION_GLOBAL,
 		REGION_SHUTDOWN,
+
 		GLOBAL_INIT,
 		GLOBAL,
 		GLOBAL_FAILED,
