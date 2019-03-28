@@ -15,8 +15,10 @@ public class ControllerState {
 	private String regionalRegion;
 	private AtomicBoolean lockMode = new AtomicBoolean();
 
+	private ControllerStatePersistance controllerStatePersistance;
 
-	public ControllerState() {
+	public ControllerState(ControllerStatePersistance controllerStatePersistance) {
+		this.controllerStatePersistance = controllerStatePersistance;
 		setPreInit();
 	}
 
@@ -109,6 +111,7 @@ public class ControllerState {
 			globalAgent = null;
 			globalRegion = null;
 		}
+		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
 	public void setAgentSuccess(String regionalRegion, String regionalAgent, String desc) {
@@ -120,6 +123,7 @@ public class ControllerState {
 			this.regionalRegion = regionalRegion;
 			this.regionalAgent = regionalAgent;
 		}
+		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
 	public void setAgentInit(String regionName, String agentName, String desc) {
@@ -133,6 +137,7 @@ public class ControllerState {
 			globalAgent = null;
 			globalRegion = null;
 		}
+		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 
 	}
 
@@ -147,6 +152,7 @@ public class ControllerState {
 			globalAgent = null;
 			globalRegion = null;
 		}
+		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
 	public void setRegionGlobalInit(String desc) {
@@ -158,6 +164,7 @@ public class ControllerState {
 			this.regionalAgent = localAgent;
 			this.regionalRegion = localRegion;
 		}
+		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
 	public void setRegionFailed(String desc) {
@@ -169,6 +176,7 @@ public class ControllerState {
 			this.regionalAgent = null;
 			this.regionalRegion = null;
 		}
+		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
 	public void setGlobalSuccess(String desc) {
@@ -180,6 +188,7 @@ public class ControllerState {
 			this.regionalAgent = localAgent;
 			this.regionalRegion = localRegion;
 		}
+		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
 	public void setRegionalGlobalSuccess(String globalRegion, String globalAgent, String desc) {
@@ -189,6 +198,7 @@ public class ControllerState {
 			this.globalRegion = globalRegion;
 			this.globalAgent = globalAgent;
 		}
+		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
 	public void setRegionalGlobalFailed(String desc) {
@@ -198,6 +208,7 @@ public class ControllerState {
 			globalAgent = null;
 			globalRegion = null;
 		}
+		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
 	public void setStandaloneInit(String agent, String desc) {
@@ -211,6 +222,7 @@ public class ControllerState {
 			globalAgent = null;
 			globalRegion = null;
 		}
+		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
 	public void setStandalone(String agent, String desc) {
@@ -224,6 +236,7 @@ public class ControllerState {
 			globalAgent = null;
 			globalRegion = null;
 		}
+		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
 	public enum Mode {
