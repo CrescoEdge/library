@@ -101,6 +101,9 @@ public class ControllerState {
 	}
 
 	public void setPreInit() {
+
+		//look for
+
 		synchronized (lockMode) {
 			currentMode = Mode.PRE_INIT;
 			currentDesc = null;
@@ -239,6 +242,7 @@ public class ControllerState {
 		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
+
 	public enum Mode {
 		PRE_INIT,
 
@@ -269,4 +273,5 @@ public class ControllerState {
 
 		}
 	}
+
 }
