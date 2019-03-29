@@ -20,16 +20,17 @@ public class ControllerState {
 	private AtomicBoolean lockMode = new AtomicBoolean();
 
 
-	private Map<String, String> configParams;
+	//private Map<String, String> configParams;
 
 	private ControllerStatePersistance controllerStatePersistance;
 
 	public ControllerState(ControllerStatePersistance controllerStatePersistance) {
 		this.controllerStatePersistance = controllerStatePersistance;
-		configParams = Collections.synchronizedMap(new HashMap<>());
+		//configParams = Collections.synchronizedMap(new HashMap<>());
 		setPreInit();
 	}
 
+	/*
 	public void setConfigParams(Map<String,String> configParams) {
 		synchronized (lockMode) {
 			this.configParams.putAll(configParams);
@@ -41,6 +42,7 @@ public class ControllerState {
 			return configParams;
 		}
 	}
+	*/
 
 	public boolean isActive() {
 		synchronized (lockMode) {
