@@ -1,6 +1,10 @@
 package io.cresco.library.agent;
 
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ControllerState {
@@ -15,11 +19,27 @@ public class ControllerState {
 	private String regionalRegion;
 	private AtomicBoolean lockMode = new AtomicBoolean();
 
+
+	private Map<String, String> configParams;
+
 	private ControllerStatePersistance controllerStatePersistance;
 
 	public ControllerState(ControllerStatePersistance controllerStatePersistance) {
 		this.controllerStatePersistance = controllerStatePersistance;
+		configParams = Collections.synchronizedMap(new HashMap<>());
 		setPreInit();
+	}
+
+	public void setConfigParams(Map<String,String> configParams) {
+		synchronized (lockMode) {
+			this.configParams.putAll(configParams);
+		}
+	}
+
+	public Map<String,String> getConfigParams() {
+		synchronized (lockMode) {
+			return configParams;
+		}
 	}
 
 	public boolean isActive() {
