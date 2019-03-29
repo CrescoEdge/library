@@ -1,9 +1,8 @@
 package io.cresco.library.plugin;
 
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Cresco configuration handler
@@ -14,6 +13,8 @@ import java.util.NoSuchElementException;
 public class Config {
     /** Environmental Variable Prefix */
     private static final String ENV_PREFIX = "CRESCO_";
+
+    private AtomicBoolean lockConfig = new AtomicBoolean();
     /** Plugin configuration object */
     protected Map<String,Object> configMap;
     /**
@@ -22,7 +23,8 @@ public class Config {
      */
     public Config(Map<String,Object> configMap) {
 
-        this.configMap = configMap;
+        this.configMap = Collections.synchronizedMap(new HashMap<>());
+        this.configMap.putAll(configMap);
     }
     /**
      * Grab configuration entry as Boolean
@@ -31,6 +33,7 @@ public class Config {
      */
     public Boolean getBooleanParam(String param) {
 
+
         String env = System.getProperty(param);
 
         if(env == null) {
@@ -38,6 +41,11 @@ public class Config {
         }
 
         if (env != null) {
+
+            synchronized (lockConfig) {
+                configMap.put(param,env);
+            }
+
             if (env.toLowerCase().trim().equals("true") || env.trim().equals("1")) {
                 return true;
             }
@@ -45,6 +53,7 @@ public class Config {
                 return false;
             }
         }
+
         try {
 
             if(configMap.containsKey(param)) {
@@ -55,6 +64,7 @@ public class Config {
         } catch (NoSuchElementException e) {
             return null;
         }
+
     }
     /**
      * Grab configuration entry as Boolean
@@ -79,6 +89,13 @@ public class Config {
             if(env == null) {
                 env = System.getenv(ENV_PREFIX + param);
             }
+
+            if(env != null) {
+                synchronized (lockConfig) {
+                    configMap.put(param,env);
+                }
+            }
+
             return Double.parseDouble(env);
 
         } catch (NumberFormatException nfe) {
@@ -117,6 +134,13 @@ public class Config {
             if(env == null) {
                 env = System.getenv(ENV_PREFIX + param);
             }
+
+            if(env != null) {
+                synchronized (lockConfig) {
+                    configMap.put(param,env);
+                }
+            }
+
             return Integer.parseInt(env);
         } catch (NumberFormatException nfe) {
             try {
@@ -154,6 +178,13 @@ public class Config {
             if(env == null) {
                 env = System.getenv(ENV_PREFIX + param);
             }
+
+            if(env != null) {
+                synchronized (lockConfig) {
+                    configMap.put(param,env);
+                }
+            }
+
             return Long.parseLong(env);
         } catch (NumberFormatException nfe) {
             try {
@@ -191,8 +222,13 @@ public class Config {
             env = System.getenv(ENV_PREFIX + param);
         }
 
-        if (env != null)
+        if(env != null) {
+            synchronized (lockConfig) {
+                configMap.put(param,env);
+            }
             return env;
+        }
+
         try {
             if(configMap.containsKey(param)) {
                 return (String)configMap.get(param);
@@ -224,6 +260,15 @@ public class Config {
      * Returns a JSON representation of the configuration object
      * @return                  JSONified configuration object
      */
+
+    public Map<String,Object> getConfigMap() {
+
+        Map<String,Object> returnConfigMap = new HashMap<>();
+        synchronized (lockConfig) {
+            returnConfigMap.putAll(this.configMap);
+        }
+        return getConfigMap();
+    }
 
     public String getConfigAsJSON() {
         StringBuilder sb = new StringBuilder();
