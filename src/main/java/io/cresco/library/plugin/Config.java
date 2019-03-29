@@ -267,7 +267,7 @@ public class Config {
         synchronized (lockConfig) {
             returnConfigMap.putAll(this.configMap);
         }
-        return getConfigMap();
+        return returnConfigMap;
     }
 
     public String getConfigAsJSON() {
