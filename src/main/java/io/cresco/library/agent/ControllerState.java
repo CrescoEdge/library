@@ -242,12 +242,12 @@ public class ControllerState {
 		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
-	public void setStandaloneInit(String agent, String desc) {
+	public void setStandaloneInit(String region, String agent, String desc) {
 		synchronized (lockMode) {
 			currentMode = Mode.STANDALONE_INIT;
 			currentDesc = desc;
 			localAgent = agent;
-			localRegion = null;
+			localRegion = region;
 			regionalRegion = null;
 			regionalAgent = null;
 			globalAgent = null;
@@ -256,7 +256,7 @@ public class ControllerState {
 		controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent);
 	}
 
-	public void setStandalone(String agent, String desc) {
+	public void setStandalone(String region, String agent, String desc) {
 		synchronized (lockMode) {
 			currentMode = Mode.STANDALONE;
 			currentDesc = desc;
