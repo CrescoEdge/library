@@ -124,13 +124,19 @@ public class ControllerState {
 
 	public void setPreInit() {
 
-		//look for
+		//pull last known agent and region name from the database
+		Map<String, String> lastCState = controllerStatePersistance.getStateMap();
 
 		synchronized (lockMode) {
 			currentMode = Mode.PRE_INIT;
-			currentDesc = null;
-			localAgent = null;
-			localRegion = null;
+			currentDesc = "Initial State";
+			if(lastCState != null) {
+				localAgent = lastCState.get("local_agent");
+				localRegion = lastCState.get("local_region");
+			} else {
+				localAgent = null;
+				localRegion = null;
+			}
 			regionalRegion = null;
 			regionalAgent = null;
 			globalAgent = null;
