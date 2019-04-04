@@ -43,12 +43,12 @@ public class pNode {
 
 	}
 
-	public boolean isEqual (String name, String jarfile, String md5, String version) {
+	public boolean isEqual (String name, String jarfile, String version, String md5) {
 
         return (this.name.equals(name)) && (this.jarfile.equals(jarfile)) && (this.md5.equals(md5)) && (this.version.equals(version));
     }
 
-	public boolean isEqual (String name, String md5, String version) {
+	public boolean isEqual (String name, String version, String md5) {
 
 		return (this.name.equals(name)) && (this.md5.equals(md5)) && (this.version.equals(version));
 	}
