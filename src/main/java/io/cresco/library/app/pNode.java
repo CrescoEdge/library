@@ -48,6 +48,11 @@ public class pNode {
         return (this.name.equals(name)) && (this.jarfile.equals(jarfile)) && (this.md5.equals(md5)) && (this.version.equals(version));
     }
 
+	public boolean isEqual (String name, String md5, String version) {
+
+		return (this.name.equals(name)) && (this.md5.equals(md5)) && (this.version.equals(version));
+	}
+
     public Date getBuildTime() {
         Date buildDate = null;
         try {
