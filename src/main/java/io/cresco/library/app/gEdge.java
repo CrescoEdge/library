@@ -10,8 +10,14 @@ public class gEdge {
 	  public String node_from;
 	  public String node_to;
 	  public Map<String, String> params;
-	  
-	  public gEdge(String edge_id, String node_from, String node_to)
+	  public String node_from_regiont;
+	  public String node_from_agent;
+	  public String node_to_region;
+	  public String node_to_agent;
+
+
+
+	public gEdge(String edge_id, String node_from, String node_to)
 	  {
 		 this.edge_id = edge_id;
 		 this.node_from = node_from;
