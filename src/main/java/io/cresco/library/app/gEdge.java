@@ -10,7 +10,8 @@ public class gEdge {
 	  public String node_from;
 	  public String node_to;
 	  public Map<String, String> params;
-
+	  public Map<String, String> params_to;
+	  public Map<String, String> params_from;
 
 	public gEdge(String edge_id, String node_from, String node_to)
 	  {
@@ -18,6 +19,8 @@ public class gEdge {
 		 this.node_from = node_from;
 		 this.node_to = node_to;
 		 params = new HashMap<>();
+		 params_to = new HashMap<>();
+		 params_from = new HashMap<>();
 	  }
 
 	public gEdge(String edge_id, String node_from, String node_to, Map<String, String> params)
@@ -26,8 +29,10 @@ public class gEdge {
 		this.node_from = node_from;
 		this.node_to = node_to;
 		this.params = params;
+		params_to = new HashMap<>();
+		params_from = new HashMap<>();
 	}
 
 
 	  
-	}
+}
