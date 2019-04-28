@@ -146,11 +146,14 @@ public class ControllerState {
 	}
 
 	public boolean setAgentShutdown(String desc) {
-		synchronized (lockMode) {
-			currentMode = Mode.AGENT_SHUTDOWN;
-			currentDesc = desc;
-		}
-		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)){
+
+		if(controllerStatePersistance.setControllerState(Mode.AGENT_SHUTDOWN, desc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)){
+
+			synchronized (lockMode) {
+				currentMode = Mode.AGENT_SHUTDOWN;
+				currentDesc = desc;
+			}
+
 			return true;
 		} else {
 			return false;
