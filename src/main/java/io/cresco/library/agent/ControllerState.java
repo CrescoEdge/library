@@ -145,14 +145,10 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setAgentShutdown(String regionalRegion, String regionalAgent, String desc) {
+	public boolean setAgentShutdown(String desc) {
 		synchronized (lockMode) {
 			currentMode = Mode.AGENT_SHUTDOWN;
 			currentDesc = desc;
-			this.globalAgent = null;
-			this.globalRegion = null;
-			this.regionalRegion = regionalRegion;
-			this.regionalAgent = regionalAgent;
 		}
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)){
 			return true;
@@ -332,10 +328,6 @@ public class ControllerState {
 		synchronized (lockMode) {
 			currentMode = Mode.GLOBAL_SHUTDOWN;
 			currentDesc = desc;
-			this.regionalAgent = localAgent;
-			this.regionalRegion = localRegion;
-			this.regionalAgent = localAgent;
-			this.regionalRegion = localRegion;
 		}
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
@@ -358,16 +350,10 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setRegionShutdown(String regionName, String agentName, String desc) {
+	public boolean setRegionShutdown(String desc) {
 		synchronized (lockMode) {
 			currentMode = Mode.REGION_SHUTDOWN;
 			currentDesc = desc;
-			localRegion = regionName;
-			localAgent = agentName;
-			regionalRegion = null;
-			regionalAgent = null;
-			globalAgent = null;
-			globalRegion = null;
 		}
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
@@ -444,16 +430,10 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setStandaloneShutdown(String region, String agent, String desc) {
+	public boolean setStandaloneShutdown(String desc) {
 		synchronized (lockMode) {
 			currentMode = Mode.STANDALONE_SHUTDOWN;
 			currentDesc = desc;
-			localAgent = agent;
-			localRegion = null;
-			regionalRegion = null;
-			regionalAgent = null;
-			globalAgent = null;
-			globalRegion = null;
 		}
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
