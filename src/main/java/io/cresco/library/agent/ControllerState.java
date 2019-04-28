@@ -46,9 +46,9 @@ public class ControllerState {
 		}
 	}
 
-	public String getControllerState() {
+	public Mode getControllerState() {
 		synchronized (lockMode) {
-			return currentMode.toString();
+			return currentMode;
 		}
 	}
 
