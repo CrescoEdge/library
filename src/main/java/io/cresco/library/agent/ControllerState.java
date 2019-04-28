@@ -328,11 +328,12 @@ public class ControllerState {
 	}
 
 	public boolean setGlobalShutdown(String desc) {
-		synchronized (lockMode) {
-			currentMode = Mode.GLOBAL_SHUTDOWN;
-			currentDesc = desc;
-		}
-		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
+
+		if(controllerStatePersistance.setControllerState(Mode.GLOBAL_SHUTDOWN, desc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
+			synchronized (lockMode) {
+				currentMode = Mode.GLOBAL_SHUTDOWN;
+				currentDesc = desc;
+			}
 			return true;
 		} else {
 			return false;
@@ -354,11 +355,12 @@ public class ControllerState {
 	}
 
 	public boolean setRegionShutdown(String desc) {
-		synchronized (lockMode) {
-			currentMode = Mode.REGION_SHUTDOWN;
-			currentDesc = desc;
-		}
-		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
+
+		if(controllerStatePersistance.setControllerState(Mode.REGION_SHUTDOWN, desc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
+			synchronized (lockMode) {
+				currentMode = Mode.REGION_SHUTDOWN;
+				currentDesc = desc;
+			}
 			return true;
 		} else {
 			return false;
