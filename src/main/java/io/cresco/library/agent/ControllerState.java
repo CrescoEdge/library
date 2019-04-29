@@ -283,6 +283,8 @@ public class ControllerState {
 		synchronized (lockMode) {
 			currentMode = Mode.GLOBAL;
 			currentDesc = desc;
+			this.globalRegion = localRegion;
+			this.globalAgent = localAgent;
 			this.regionalAgent = localAgent;
 			this.regionalRegion = localRegion;
 			this.regionalAgent = localAgent;
