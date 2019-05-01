@@ -35,6 +35,4 @@ public interface DataPlaneService {
     public List<FileObject> getFileObjectsFromString(String fileObjectsString);
     public String generateFileObjectsString(List<FileObject> fileObjects);
     public Path getJournalPath();
-
-
 }
