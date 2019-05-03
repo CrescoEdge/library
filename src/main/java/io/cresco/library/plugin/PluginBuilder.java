@@ -150,7 +150,6 @@ public class PluginBuilder {
     }
     public boolean isIPv6() { return false; }
 
-
     public MsgEvent sendRPC(MsgEvent msg) {
         msg.setParam("is_rpc",Boolean.TRUE.toString());
         return this.rpc.call(msg);
