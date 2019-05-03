@@ -150,9 +150,15 @@ public class PluginBuilder {
     }
     public boolean isIPv6() { return false; }
 
+
     public MsgEvent sendRPC(MsgEvent msg) {
         msg.setParam("is_rpc",Boolean.TRUE.toString());
         return this.rpc.call(msg);
+    }
+
+    public MsgEvent sendRPC(MsgEvent msg, long timeout) {
+        msg.setParam("is_rpc",Boolean.TRUE.toString());
+        return this.rpc.call(msg, timeout);
     }
 
     public MsgEvent getGlobalControllerMsgEvent(MsgEvent.Type type) {
