@@ -424,24 +424,38 @@ public class PluginBuilder {
                 inputURL = new URL(jarLocation);
                 JarURLConnection conn = (JarURLConnection)inputURL.openConnection();
                 in = conn.getInputStream();
-                hashString = getMD5(in);
+
+                if(in != null) {
+                    hashString = getMD5(in);
+                }
+
 
             } else {
-                Path checkPath = Paths.get(jarLocation);
 
                 InputStream inputStream = null;
-                if (checkPath.toFile().exists()) {
-                    inputStream = new FileInputStream(jarLocation);
-                } else {
+
+                if(jarLocation.contains("!")) {
                     URL fileURL = getClass().getClassLoader().getResource(jarLocation);
                     if (fileURL != null) {
                         inputStream = getClass().getClassLoader().getResourceAsStream(fileURL.getPath());
+                    }
+
+                } else {
+
+                    if(jarLocation.startsWith("file:")) {
+                        jarLocation = jarLocation.replace("file:","");
+                    }
+                    Path checkPath = Paths.get(jarLocation);
+
+                    if (checkPath.toFile().exists()) {
+                        inputStream = new FileInputStream(jarLocation);
                     }
                 }
 
                 if (inputStream != null) {
                     hashString = getMD5(inputStream);
                 }
+
             }
 
         } catch (Exception ex) {
@@ -450,6 +464,7 @@ public class PluginBuilder {
         //return complete hash
         return hashString;
     }
+
 
     public String getMD5(InputStream inputStream) {
         String hashString = null;
