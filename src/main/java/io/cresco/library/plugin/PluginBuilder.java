@@ -10,8 +10,11 @@ import org.osgi.framework.ServiceReference;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.net.JarURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -400,50 +403,43 @@ public class PluginBuilder {
     }
     */
 
-    public String getMD5(String filePath) {
+
+
+
+    public String getMD5(String jarLocation) {
         String hashString = null;
         try {
 
-            Path checkPath = Paths.get(filePath);
 
-            InputStream inputStream = null;
-            if(checkPath.toFile().exists()) {
-                inputStream = new FileInputStream(filePath);
+            if(jarLocation.startsWith("jar:")) {
+
+                URL inputURL = null;
+                InputStream in = null;
+
+
+                inputURL = new URL(jarLocation);
+                JarURLConnection conn = (JarURLConnection)inputURL.openConnection();
+                in = conn.getInputStream();
+                hashString = getMD5(in);
+
             } else {
-                URL fileURL = getClass().getClassLoader().getResource(filePath);
-                if(fileURL != null) {
-                    inputStream = getClass().getClassLoader().getResourceAsStream(fileURL.getPath());
-                }
-            }
+                Path checkPath = Paths.get(jarLocation);
 
-            if(inputStream != null) {
-
-                MessageDigest digest = MessageDigest.getInstance("MD5");
-
-                //Create byte array to read data in chunks
-                byte[] byteArray = new byte[1024];
-                int bytesCount = 0;
-
-                //Read file data and update in message digest
-                while ((bytesCount = inputStream.read(byteArray)) != -1) {
-                    digest.update(byteArray, 0, bytesCount);
-                }
-                ;
-
-                //close the stream; We don't need it now.
-                inputStream.close();
-
-                //Get the hash's bytes
-                byte[] bytes = digest.digest();
-
-                //This bytes[] has bytes in decimal format;
-                //Convert it to hexadecimal format
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < bytes.length; i++) {
-                    sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
+                InputStream inputStream = null;
+                if (checkPath.toFile().exists()) {
+                    inputStream = new FileInputStream(jarLocation);
+                } else {
+                    URL fileURL = getClass().getClassLoader().getResource(jarLocation);
+                    if (fileURL != null) {
+                        inputStream = getClass().getClassLoader().getResourceAsStream(fileURL.getPath());
+                    }
                 }
 
-                hashString = sb.toString();
+                if (inputStream != null) {
+
+                    hashString = getMD5(inputStream);
+
+                }
             }
 
         } catch (Exception ex) {
