@@ -11,6 +11,7 @@ public interface DataPlaneService {
 
     //sending messages on DP
     String addMessageListener(TopicType topicType, MessageListener messageListener, String selectorString);
+    void removeMessageListener(String listenerId);
     boolean sendMessage(TopicType topicType, Message message);
     BytesMessage createBytesMessage();
     MapMessage createMapMessage();
@@ -34,6 +35,4 @@ public interface DataPlaneService {
     public List<FileObject> getFileObjectsFromString(String fileObjectsString);
     public String generateFileObjectsString(List<FileObject> fileObjects);
     public Path getJournalPath();
-
-
 }

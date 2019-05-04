@@ -158,6 +158,11 @@ public class PluginBuilder {
         return this.rpc.call(msg);
     }
 
+    public MsgEvent sendRPC(MsgEvent msg, long timeout) {
+        msg.setParam("is_rpc",Boolean.TRUE.toString());
+        return this.rpc.call(msg, timeout);
+    }
+
     public MsgEvent getGlobalControllerMsgEvent(MsgEvent.Type type) {
         return getMsgEvent(type, getRegion(),getAgent(), null,true,true);
     }

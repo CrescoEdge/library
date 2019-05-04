@@ -18,8 +18,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class RPC {
     /** Time between checks for RPC return message (in milliseconds) */
-    private static final int CHECK_INTERVAL = 1000;
+    private static final int CHECK_INTERVAL = 100;
     /** Maximum iterations to check for RPC return message */
+    //set the interval count
     private static final int MAX_INTERVALS = 300;
     /** Cresco logger */
     private CLogger logger;
@@ -39,6 +40,38 @@ public class RPC {
         this.logger = plugin.getLogger(RPC.class.getName(),CLogger.Level.Info);
     }
 
+    /**
+     * Issues a remote procedure call
+     * @param msg           Message to send
+     * @return              The return message, null if no return is received
+     */
+    public MsgEvent call(MsgEvent msg, long timeout) {
+        try {
+            String callId = java.util.UUID.randomUUID().toString();
+            msg.setParam("callId-" + plugin.getRegion() + "-" + plugin.getAgent() + "-" + plugin.getPluginID(), callId);
+
+            plugin.msgOut(msg);
+
+            int rounds = (int) Math.round(timeout/CHECK_INTERVAL);
+
+            int count = 0;
+            while (count++ < rounds) {
+                synchronized (lock) {
+                    if (rpcMap.containsKey(callId)) {
+                        MsgEvent callBack;
+                        callBack = rpcMap.get(callId);
+                        rpcMap.remove(callId);
+                        return callBack;
+                    }
+                }
+                Thread.sleep(CHECK_INTERVAL);
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            logger.error("call {}", ex.getMessage());
+        }
+        return null;
+    }
 
     /**
      * Issues a remote procedure call
