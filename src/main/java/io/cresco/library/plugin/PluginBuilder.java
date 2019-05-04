@@ -387,29 +387,6 @@ public class PluginBuilder {
         return version;
     }
 
-    /*
-    //use what exist in the dataservices.
-    public String getJarMD5(String pluginFile) {
-        String jarString = null;
-        try
-        {
-            Path path = Paths.get(pluginFile);
-            byte[] data = Files.readAllBytes(path);
-
-            MessageDigest m= MessageDigest.getInstance("MD5");
-            m.update(data);
-            jarString = new BigInteger(1,m.digest()).toString(16);
-        }
-        catch(Exception e)
-        {
-            e.printStackTrace();
-        }
-        return jarString;
-    }
-    */
-
-
-
 
     public String getMD5(String jarLocation) {
         String hashString = null;
