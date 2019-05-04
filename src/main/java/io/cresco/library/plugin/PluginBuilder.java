@@ -415,7 +415,6 @@ public class PluginBuilder {
         String hashString = null;
         try {
 
-
             if(jarLocation.startsWith("jar:")) {
 
                 URL inputURL = null;
@@ -441,9 +440,7 @@ public class PluginBuilder {
                 }
 
                 if (inputStream != null) {
-
                     hashString = getMD5(inputStream);
-
                 }
             }
 
