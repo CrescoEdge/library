@@ -26,11 +26,21 @@ public class MsgEvent {
     private boolean isRegional = false;
     private boolean isGlobal = false;
 
-    private boolean hasOutgoingFiles = false;
+    //msgparams constants
+    private static final String HAS_OUTGOING_FILES = "HAS_OUTGOING_FILES";
+    private static final String IS_PATH_TRACE = "IS_PATH_TRACE";
 
+
+    //private boolean hasOutgoingFiles = false;
+
+    private Map<String, String> msgparams;
     private Map<String, String> params;
 
+    //for file list
     private List<String> fileList;
+
+    //for path trace
+    private List<Map<String,String>> pathList;
 
     public MsgEvent() {
 
@@ -64,7 +74,7 @@ public class MsgEvent {
             this.params.put("dst_plugin", dst_plugin);
         }
 
-        //fileList = new ArrayList<>();
+        msgparams = new HashMap<>();
 
     }
 
@@ -75,6 +85,7 @@ public class MsgEvent {
         //this.msgPlugin = msgPlugin;
         this.params = new HashMap<String, String>();
         params.put("msg", msgBody);
+        msgparams = new HashMap<>();
     }
 
     public MsgEvent(Type msgType, String msgRegion, String msgAgent, String msgPlugin, Map<String, String> params) {
@@ -84,6 +95,7 @@ public class MsgEvent {
         //this.msgPlugin = msgPlugin;
         this.params = params;
         this.params = new HashMap<String, String>(params);
+        msgparams = new HashMap<>();
     }
 
     public boolean isGlobal() {
@@ -184,7 +196,7 @@ public class MsgEvent {
         dst_plugin = src_plugin_tmp;
 
         //todo remove in the future
-        setReturnParams();
+        //setReturnParams();
     }
 
     public String printHeader() {
@@ -194,6 +206,7 @@ public class MsgEvent {
                 " dst_plugin:" + dst_plugin;
     }
 
+    /*
     public void setReturnParams() {
         String src_region = getParam("src_region");
         String src_agent = getParam("src_agent");
@@ -230,6 +243,7 @@ public class MsgEvent {
         }
 
     }
+    */
 
     public String getMsgBody() {
         return params.get("msg");
@@ -278,7 +292,7 @@ public class MsgEvent {
         try {
             if(fileList == null) {
                 fileList = new ArrayList<>();
-                hasOutgoingFiles = true;
+                msgparams.put(HAS_OUTGOING_FILES,Boolean.TRUE.toString());
             }
             fileList.add(filePath);
         } catch (Exception ex) {
@@ -290,13 +304,13 @@ public class MsgEvent {
         if(fileList != null) {
             fileList.clear();
         }
-        hasOutgoingFiles = false;
+        msgparams.put(HAS_OUTGOING_FILES,Boolean.FALSE.toString());
     }
 
     public void addFiles(List<String> files) {
         if(fileList == null) {
             fileList = new ArrayList<>();
-            hasOutgoingFiles = true;
+            msgparams.put(HAS_OUTGOING_FILES,Boolean.TRUE.toString());
         }
         fileList.addAll(files);
     }
@@ -306,12 +320,50 @@ public class MsgEvent {
     }
 
     public boolean hasFiles() {
-        //if(!fileList.isEmpty()) {
-        //    return true;
-        //}
-        return hasOutgoingFiles;
+
+        if(msgparams.containsKey(HAS_OUTGOING_FILES)) {
+            if(Boolean.parseBoolean(msgparams.get(HAS_OUTGOING_FILES))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
+    public boolean isPathTrace() {
+
+        if(msgparams.containsKey(IS_PATH_TRACE)) {
+            if(Boolean.parseBoolean(msgparams.get(IS_PATH_TRACE))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public void setIsPathTrace(Boolean pathTrace) {
+
+        msgparams.put(IS_PATH_TRACE,pathTrace.toString());
+
+    }
+
+    public void addPath(Map<String,String> pathMap) {
+        try {
+            if(pathList == null) {
+                pathList = new ArrayList<>();
+                msgparams.put(IS_PATH_TRACE,Boolean.TRUE.toString());
+            }
+            pathList.add(pathMap);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public List<Map<String,String>> getPathList() {
+        List<Map<String,String>> tmpPathList = new ArrayList<>();
+        tmpPathList.addAll(pathList);
+        return tmpPathList;
+    }
 
     public void setDataParam(String key, byte[] value) {
         params.put(key, DatatypeConverter.printBase64Binary(value));
