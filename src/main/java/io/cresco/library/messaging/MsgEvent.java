@@ -60,33 +60,23 @@ public class MsgEvent {
         this.isRegional = isRegional;
         this.isGlobal = isGlobal;
 
-        //create extra params
-        this.params = new HashMap<String, String>();
-        //adding params for backward compatability
-        this.params.put("src_region", src_region);
-        this.params.put("src_agent", src_agent);
-        if(src_plugin != null) {
-            this.params.put("src_plugin", src_plugin);
-        }
-        this.params.put("dst_region",dst_region);
-        this.params.put("dst_agent",dst_agent);
-        if(dst_plugin != null) {
-            this.params.put("dst_plugin", dst_plugin);
-        }
 
+        //create payload params
+        this.params = new HashMap<String, String>();
+
+        //create message params
         msgparams = new HashMap<>();
 
     }
+
 
     public MsgEvent(Type msgType, String msgRegion, String msgAgent, String msgPlugin, String msgBody) {
         this.msgType = msgType;
-        //this.msgRegion = msgRegion;
-        //this.msgAgent = msgAgent;
-        //this.msgPlugin = msgPlugin;
         this.params = new HashMap<String, String>();
-        params.put("msg", msgBody);
         msgparams = new HashMap<>();
     }
+
+    /*
 
     public MsgEvent(Type msgType, String msgRegion, String msgAgent, String msgPlugin, Map<String, String> params) {
         this.msgType = msgType;
@@ -97,6 +87,7 @@ public class MsgEvent {
         this.params = new HashMap<String, String>(params);
         msgparams = new HashMap<>();
     }
+    */
 
     public boolean isGlobal() {
         return isGlobal;
@@ -163,16 +154,18 @@ public class MsgEvent {
         this.dst_region = dstRegion;
         this.dst_agent = dstAgent;
         this.dst_plugin = dstPlugin;
-        if(dstPlugin == null) {
-            if (paramsContains(dst_plugin)) {
-                removeParam(dst_plugin);
-            }
-        } else {
-            setParam("dst_plugin", dstPlugin);
-        }
-        setParam("dst_region", dstRegion);
-        setParam("dst_agent", dstAgent);
 
+    }
+
+    public String getForwardDst() {
+
+        if ((dst_region != null) && (dst_agent != null)) {
+            return dst_region + "_" + dst_agent;
+        } else if (dst_region != null) {
+            return dst_region;
+        } else {
+            return null;
+        }
     }
 
     public void setReturn() {
@@ -195,8 +188,6 @@ public class MsgEvent {
         dst_agent = src_agent_tmp;
         dst_plugin = src_plugin_tmp;
 
-        //todo remove in the future
-        //setReturnParams();
     }
 
     public String printHeader() {
@@ -206,45 +197,8 @@ public class MsgEvent {
                 " dst_plugin:" + dst_plugin;
     }
 
+
     /*
-    public void setReturnParams() {
-        String src_region = getParam("src_region");
-        String src_agent = getParam("src_agent");
-        String src_plugin = getParam("src_plugin");
-
-        removeParam("src_region");
-        removeParam("src_agent");
-        removeParam("src_plugin");
-
-        if (getParam("dst_region") != null) {
-            setParam("src_region", getParam("dst_region"));
-        }
-        if (getParam("dst_agent") != null) {
-            setParam("src_agent", getParam("dst_agent"));
-        }
-        if (getParam("dst_plugin") != null) {
-            setParam("src_plugin", getParam("dst_plugin"));
-        }
-
-        if (src_region != null) {
-            setParam("dst_region", src_region);
-        } else {
-            removeParam("dst_region");
-        }
-        if (src_agent != null) {
-            setParam("dst_agent", src_agent);
-        } else {
-            removeParam("dst_agent");
-        }
-        if (src_plugin != null) {
-            setParam("dst_plugin", src_plugin);
-        } else {
-            removeParam("dst_plugin");
-        }
-
-    }
-    */
-
     public String getMsgBody() {
         return params.get("msg");
     }
@@ -252,6 +206,7 @@ public class MsgEvent {
     public void setMsgBody(String msgBody) {
         params.put("msg", msgBody);
     }
+    */
 
     @XmlJavaTypeAdapter(MsgEventTypesAdapter.class)
     public Type getMsgType() {
@@ -277,6 +232,16 @@ public class MsgEvent {
     }
 
     public void setParam(String key, String value) {
+
+        /*
+        try {
+            if ((key.startsWith("src_")) || (key.startsWith("dst_"))) {
+                throw new NullPointerException("Found SRC_ or DST_");
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        */
         params.put(key, value);
     }
 
