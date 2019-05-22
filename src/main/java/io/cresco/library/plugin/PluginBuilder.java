@@ -47,7 +47,7 @@ public class PluginBuilder {
         this(null,className,context,configMap);
     }
 
-    public PluginBuilder(AgentService agentService,String className, BundleContext context, Map<String,Object> configMap) {
+    public PluginBuilder(AgentService agentService, String className, BundleContext context, Map<String,Object> configMap) {
 
         this.msgInProcessQueue = Executors.newCachedThreadPool();
 
@@ -149,7 +149,8 @@ public class PluginBuilder {
     public CrescoMeterRegistry getCrescoMeterRegistry() { return crescoMeterRegistry; }
 
     public CLogger getLogger(String issuingClassName, CLogger.Level level) {
-        return new CLogger(this,baseClassName,issuingClassName,level);
+        //return new CLogger(this,baseClassName,issuingClassName,level);
+        return agentService.getCLogger(this,baseClassName,issuingClassName,level);
     }
     public boolean isIPv6() { return false; }
 
