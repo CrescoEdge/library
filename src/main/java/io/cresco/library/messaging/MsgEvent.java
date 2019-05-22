@@ -324,6 +324,8 @@ public class MsgEvent {
         }
     }
 
+
+
     public List<Map<String,String>> getPathList() {
         List<Map<String,String>> tmpPathList = new ArrayList<>();
         tmpPathList.addAll(pathList);
