@@ -1,7 +1,6 @@
 package io.cresco.library.agent;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ControllerState {
 
@@ -13,92 +12,65 @@ public class ControllerState {
 	private String globalRegion;
 	private String regionalAgent;
 	private String regionalRegion;
-	private AtomicBoolean lockMode = new AtomicBoolean();
-
-
-	//private Map<String, String> configParams;
 
 	private ControllerStatePersistance controllerStatePersistance;
 
 	public ControllerState(ControllerStatePersistance controllerStatePersistance) {
 		this.controllerStatePersistance = controllerStatePersistance;
-		//configParams = Collections.synchronizedMap(new HashMap<>());
 		setPreInit();
 	}
 
-	/*
-	public void setConfigParams(Map<String,String> configParams) {
-		synchronized (lockMode) {
-			this.configParams.putAll(configParams);
-		}
-	}
-
-	public Map<String,String> getConfigParams() {
-		synchronized (lockMode) {
-			return configParams;
-		}
-	}
-	*/
-
-	public boolean isActive() {
-		synchronized (lockMode) {
+	public synchronized boolean isActive() {
 			return (currentMode == Mode.AGENT) || (currentMode == Mode.GLOBAL) || (currentMode == Mode.REGION_GLOBAL);
-		}
 	}
 
-	public Mode getControllerState() {
-		synchronized (lockMode) {
+	public synchronized Mode getControllerState() {
 			return currentMode;
-		}
 	}
 
-	public String getCurrentDesc() {
+	public synchronized String getCurrentDesc() {
 		return  currentDesc;
 	}
 
-	public boolean isRegionalController() {
+	public synchronized boolean isRegionalController() {
 		boolean isRC = false;
 
-		synchronized (lockMode) {
 			if ((currentMode.toString().startsWith("REGION")) || isGlobalController()) {
 				isRC = true;
 			}
-		}
 		return isRC;
 	}
 
-	public boolean isGlobalController() {
+	public synchronized boolean isGlobalController() {
 		boolean isGC = false;
 
-		synchronized (lockMode) {
 			if (currentMode.toString().startsWith("GLOBAL")) {
 				isGC = true;
 			}
-		}
 		return isGC;
 	}
 
-	public String getRegion() { return localRegion; }
+	public synchronized String getRegion() { return localRegion; }
 
-	public String getAgent() { return localAgent; }
+	public synchronized String getAgent() { return localAgent; }
 
-	public String getGlobalAgent() {
+	public synchronized String getGlobalAgent() {
 		return globalAgent;
 	}
 
-	public String getGlobalRegion() {
+	public synchronized String getGlobalRegion() {
 		return globalRegion;
 	}
 
-	public String getRegionalAgent() {
+	public synchronized String getRegionalAgent() {
 		return regionalAgent;
 	}
 
-	public String getRegionalRegion() {
+	public synchronized String getRegionalRegion() {
 		return regionalRegion;
 	}
 
-	public String getGlobalControllerPath() {
+	public synchronized String getGlobalControllerPath() {
 		if(isRegionalController()) {
 			return globalRegion + "_" + globalAgent;
 		} else {
@@ -106,7 +78,7 @@ public class ControllerState {
 		}
 	}
 
-	public String getRegionalControllerPath() {
+	public synchronized String getRegionalControllerPath() {
 		if(isRegionalController()) {
 			return regionalRegion + "_" + regionalAgent;
 		} else {
@@ -114,16 +86,15 @@ public class ControllerState {
 		}
 	}
 
-	public String getAgentPath() {
+	public synchronized String getAgentPath() {
 		return localRegion + "_" + localAgent;
 	}
 
-	public boolean setPreInit() {
+	public synchronized boolean setPreInit() {
 
 		//pull last known agent and region name from the database
 		Map<String, String> lastCState = controllerStatePersistance.getStateMap();
 
-		synchronized (lockMode) {
 			currentMode = Mode.PRE_INIT;
 			currentDesc = "Initial State";
 			if(lastCState != null) {
@@ -137,7 +108,7 @@ public class ControllerState {
 			regionalAgent = null;
 			globalAgent = null;
 			globalRegion = null;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
@@ -145,14 +116,12 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setAgentShutdown(String desc) {
+	public synchronized boolean setAgentShutdown(String desc) {
 
 		if(controllerStatePersistance.setControllerState(Mode.AGENT_SHUTDOWN, desc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)){
 
-			synchronized (lockMode) {
 				currentMode = Mode.AGENT_SHUTDOWN;
 				currentDesc = desc;
-			}
 
 			return true;
 		} else {
@@ -160,15 +129,14 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setAgentFailed(String regionalRegion, String regionalAgent, String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setAgentFailed(String regionalRegion, String regionalAgent, String desc) {
 			currentMode = Mode.AGENT_FAILED;
 			currentDesc = desc;
 			this.globalAgent = null;
 			this.globalRegion = null;
 			this.regionalRegion = regionalRegion;
 			this.regionalAgent = regionalAgent;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)){
 			return true;
 		} else {
@@ -176,15 +144,14 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setAgentSuccess(String regionalRegion, String regionalAgent, String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setAgentSuccess(String regionalRegion, String regionalAgent, String desc) {
 			currentMode = Mode.AGENT;
 			currentDesc = desc;
 			this.globalAgent = null;
 			this.globalRegion = null;
 			this.regionalRegion = regionalRegion;
 			this.regionalAgent = regionalAgent;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)){
 			return true;
 		} else {
@@ -192,8 +159,7 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setAgentInit(String regionName, String agentName, String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setAgentInit(String regionName, String agentName, String desc) {
 			currentMode = Mode.AGENT_INIT;
 			currentDesc = desc;
 			this.localAgent = agentName;
@@ -202,7 +168,7 @@ public class ControllerState {
 			regionalAgent = null;
 			globalAgent = null;
 			globalRegion = null;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
@@ -211,8 +177,7 @@ public class ControllerState {
 
 	}
 
-	public boolean setRegionInit(String regionName, String agentName, String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setRegionInit(String regionName, String agentName, String desc) {
 			currentMode = Mode.REGION_INIT;
 			currentDesc = desc;
 			localRegion = regionName;
@@ -221,7 +186,7 @@ public class ControllerState {
 			regionalAgent = null;
 			globalAgent = null;
 			globalRegion = null;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
@@ -229,8 +194,7 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setRegionSuccess(String regionName, String agentName, String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setRegionSuccess(String regionName, String agentName, String desc) {
 			currentMode = Mode.REGION;
 			currentDesc = desc;
 			localRegion = regionName;
@@ -239,7 +203,7 @@ public class ControllerState {
 			regionalAgent = null;
 			globalAgent = null;
 			globalRegion = null;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
@@ -247,15 +211,14 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setRegionGlobalInit(String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setRegionGlobalInit(String desc) {
 			currentMode = Mode.REGION_GLOBAL_INIT;
 			currentDesc = desc;
 			this.globalAgent = null;
 			this.globalRegion = null;
 			this.regionalAgent = localAgent;
 			this.regionalRegion = localRegion;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)){
 			return true;
 		} else {
@@ -263,15 +226,14 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setRegionFailed(String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setRegionFailed(String desc) {
 			currentMode = Mode.REGION_FAILED;
 			currentDesc = desc;
 			this.globalAgent = null;
 			this.globalRegion = null;
 			this.regionalAgent = null;
 			this.regionalRegion = null;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else  {
@@ -279,8 +241,7 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setGlobalSuccess(String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setGlobalSuccess(String desc) {
 			currentMode = Mode.GLOBAL;
 			currentDesc = desc;
 			this.globalRegion = localRegion;
@@ -289,7 +250,7 @@ public class ControllerState {
 			this.regionalRegion = localRegion;
 			this.regionalAgent = localAgent;
 			this.regionalRegion = localRegion;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
@@ -297,15 +258,14 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setGlobalInit(String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setGlobalInit(String desc) {
 			currentMode = Mode.GLOBAL_INIT;
 			currentDesc = desc;
 			this.regionalAgent = localAgent;
 			this.regionalRegion = localRegion;
 			this.regionalAgent = localAgent;
 			this.regionalRegion = localRegion;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
@@ -313,15 +273,14 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setGlobalFailed(String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setGlobalFailed(String desc) {
 			currentMode = Mode.GLOBAL_FAILED;
 			currentDesc = desc;
 			this.regionalAgent = localAgent;
 			this.regionalRegion = localRegion;
 			this.regionalAgent = localAgent;
 			this.regionalRegion = localRegion;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
@@ -329,26 +288,24 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setGlobalShutdown(String desc) {
+	public synchronized boolean setGlobalShutdown(String desc) {
 
 		if(controllerStatePersistance.setControllerState(Mode.GLOBAL_SHUTDOWN, desc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
-			synchronized (lockMode) {
 				currentMode = Mode.GLOBAL_SHUTDOWN;
 				currentDesc = desc;
-			}
+
 			return true;
 		} else {
 			return false;
 		}
 	}
 
-	public boolean setRegionalGlobalSuccess(String globalRegion, String globalAgent, String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setRegionalGlobalSuccess(String globalRegion, String globalAgent, String desc) {
 			currentMode = Mode.REGION_GLOBAL;
 			currentDesc = desc;
 			this.globalRegion = globalRegion;
 			this.globalAgent = globalAgent;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
@@ -356,26 +313,24 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setRegionShutdown(String desc) {
+	public synchronized boolean setRegionShutdown(String desc) {
 
 		if(controllerStatePersistance.setControllerState(Mode.REGION_SHUTDOWN, desc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
-			synchronized (lockMode) {
 				currentMode = Mode.REGION_SHUTDOWN;
 				currentDesc = desc;
-			}
+
 			return true;
 		} else {
 			return false;
 		}
 	}
 
-	public boolean setRegionalGlobalFailed(String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setRegionalGlobalFailed(String desc) {
 			currentMode = Mode.REGION_GLOBAL_FAILED;
 			currentDesc = desc;
 			globalAgent = null;
 			globalRegion = null;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
@@ -383,8 +338,7 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setStandaloneInit(String region, String agent, String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setStandaloneInit(String region, String agent, String desc) {
 			currentMode = Mode.STANDALONE_INIT;
 			currentDesc = desc;
 			localAgent = agent;
@@ -393,7 +347,7 @@ public class ControllerState {
 			regionalAgent = null;
 			globalAgent = null;
 			globalRegion = null;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
@@ -401,8 +355,7 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setStandaloneSuccess(String region, String agent, String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setStandaloneSuccess(String region, String agent, String desc) {
 			currentMode = Mode.STANDALONE;
 			currentDesc = desc;
 			localAgent = agent;
@@ -411,7 +364,7 @@ public class ControllerState {
 			regionalAgent = null;
 			globalAgent = null;
 			globalRegion = null;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
@@ -419,8 +372,7 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setStandaloneFailed(String region, String agent, String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setStandaloneFailed(String region, String agent, String desc) {
 			currentMode = Mode.STANDALONE_FAILED;
 			currentDesc = desc;
 			localAgent = agent;
@@ -429,7 +381,7 @@ public class ControllerState {
 			regionalAgent = null;
 			globalAgent = null;
 			globalRegion = null;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
@@ -437,11 +389,10 @@ public class ControllerState {
 		}
 	}
 
-	public boolean setStandaloneShutdown(String desc) {
-		synchronized (lockMode) {
+	public synchronized boolean setStandaloneShutdown(String desc) {
 			currentMode = Mode.STANDALONE_SHUTDOWN;
 			currentDesc = desc;
-		}
+
 		if(controllerStatePersistance.setControllerState(currentMode, currentDesc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 			return true;
 		} else {
