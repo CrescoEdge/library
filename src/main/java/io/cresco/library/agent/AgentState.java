@@ -18,7 +18,7 @@ public class AgentState implements Serializable {
 
     public ControllerState.Mode getControllerState() {return controllerState.getControllerState(); }
 
-    private volatile ControllerState controllerState;
+    private ControllerState controllerState;
 
     public AgentState(ControllerState controllerState) {
         this.controllerState = controllerState;
