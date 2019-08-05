@@ -18,10 +18,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class RPC {
     /** Time between checks for RPC return message (in milliseconds) */
-    private static final int CHECK_INTERVAL = 100;
+    private static final long CHECK_INTERVAL = 100;
     /** Maximum iterations to check for RPC return message */
     //set the interval count
-    private static final int MAX_INTERVALS = 300;
+    private static final long MAX_INTERVALS = 300;
     /** Cresco logger */
     private CLogger logger;
     /** Communication channel */
@@ -52,7 +52,7 @@ public class RPC {
 
             plugin.msgOut(msg);
 
-            int rounds = (int) Math.round(timeout/CHECK_INTERVAL);
+            long rounds = timeout/CHECK_INTERVAL;
 
             int count = 0;
             while (count++ < rounds) {
