@@ -43,8 +43,8 @@
 <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jdk>1.8</jdk>
-    <maven.compiler.version>3.8.0</maven.compiler.version>
-    <maven.bundle.compiler.version>4.0.0</maven.bundle.compiler.version>
+    <maven.compiler.version>3.8.1</maven.compiler.version>
+    <maven.bundle.compiler.version>4.2.1</maven.bundle.compiler.version>
     <micrometer.version>1.0.8</micrometer.version>
     <avro.version>1.8.2</avro.version>
 
@@ -141,7 +141,7 @@
                     <Import-Package>*;resolution:=optional</Import-Package>
                     <Embed-Dependency>!org.osgi.*;*</Embed-Dependency>
                     <Export-Package>
-                        <!-- javax.*; -->
+                        javax.jms.*;
                         org.apache.avro.*;
                         org.tukaani.*;
                         org.apache.commons.compress.*;

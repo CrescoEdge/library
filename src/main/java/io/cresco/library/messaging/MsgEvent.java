@@ -1,15 +1,15 @@
 package io.cresco.library.messaging;
 
-import javax.xml.bind.DatatypeConverter;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+//import javax.xml.bind.DatatypeConverter;
+//import javax.xml.bind.annotation.XmlRootElement;
+//import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-@XmlRootElement
+//@XmlRootElement
 public class MsgEvent {
     public enum Type {
         CONFIG, DISCOVER, ERROR, EXEC, GC, INFO, KPI, LOG, WATCHDOG
@@ -208,7 +208,7 @@ public class MsgEvent {
     }
     */
 
-    @XmlJavaTypeAdapter(MsgEventTypesAdapter.class)
+    //@XmlJavaTypeAdapter(MsgEventTypesAdapter.class)
     public Type getMsgType() {
         return msgType;
     }
@@ -218,7 +218,7 @@ public class MsgEvent {
     }
 
 
-    @XmlJavaTypeAdapter(MsgEventParamsAdapter.class)
+    //@XmlJavaTypeAdapter(MsgEventParamsAdapter.class)
     public Map<String, String> getParams() {
         return params;
     }
@@ -250,7 +250,8 @@ public class MsgEvent {
     }
 
     public void setCompressedParam(String key, String value) {
-        params.put(key, DatatypeConverter.printBase64Binary(stringCompress(value)));
+        //params.put(key, DatatypeConverter.printBase64Binary(stringCompress(value)));
+        params.put(key,Base64.getEncoder().encodeToString(stringCompress(value)));
     }
 
     public void addFile(String filePath) {
@@ -333,11 +334,13 @@ public class MsgEvent {
     }
 
     public void setDataParam(String key, byte[] value) {
-        params.put(key, DatatypeConverter.printBase64Binary(value));
+        //params.put(key, DatatypeConverter.printBase64Binary(value));
+        params.put(key,Base64.getEncoder().encodeToString(value));
     }
 
     public void setCompressedDataParam(String key, byte[] value) {
-        params.put(key, DatatypeConverter.printBase64Binary(value));
+        //params.put(key, DatatypeConverter.printBase64Binary(value));
+        params.put(key,Base64.getEncoder().encodeToString(value));
     }
 
     public byte[] getDataParam(String key) {
@@ -345,7 +348,8 @@ public class MsgEvent {
         try {
             String value = params.get(key);
             if (value != null) {
-                byteArray = DatatypeConverter.parseBase64Binary(value);
+                //byteArray = DatatypeConverter.parseBase64Binary(value);
+                byteArray = Base64.getDecoder().decode(value);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -358,7 +362,8 @@ public class MsgEvent {
         if (value == null)
             return null;
         try {
-            byte[] exportDataRawCompressed = DatatypeConverter.parseBase64Binary(value);
+            //byte[] exportDataRawCompressed = DatatypeConverter.parseBase64Binary(value);
+            byte[] exportDataRawCompressed = Base64.getDecoder().decode(value);
             InputStream iss = new ByteArrayInputStream(exportDataRawCompressed);
             InputStream is = new GZIPInputStream(iss);
             return new Scanner(is,"UTF-8").useDelimiter("\\A").next();
