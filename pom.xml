@@ -103,11 +103,13 @@
         <version>1.0.1</version>
     </dependency>
 
+    <!--
     <dependency>
         <groupId>javax.xml.bind</groupId>
         <artifactId>jaxb-api</artifactId>
         <version>2.2.2</version>
     </dependency>
+    -->
 
 </dependencies>
 
@@ -139,7 +141,7 @@
                     <Import-Package>*;resolution:=optional</Import-Package>
                     <Embed-Dependency>!org.osgi.*;*</Embed-Dependency>
                     <Export-Package>
-                        javax.*;
+                        <!-- javax.*; -->
                         org.apache.avro.*;
                         org.tukaani.*;
                         org.apache.commons.compress.*;
