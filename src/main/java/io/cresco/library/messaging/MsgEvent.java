@@ -31,6 +31,7 @@ public class MsgEvent {
     private static final String IS_PATH_TRACE = "IS_PATH_TRACE";
 
 
+
     //private boolean hasOutgoingFiles = false;
 
     private Map<String, String> msgparams;
