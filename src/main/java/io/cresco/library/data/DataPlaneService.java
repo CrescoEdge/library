@@ -13,12 +13,14 @@ public interface DataPlaneService {
     String addMessageListener(TopicType topicType, MessageListener messageListener, String selectorString);
     void removeMessageListener(String listenerId);
     boolean sendMessage(TopicType topicType, Message message);
+    boolean isFaultURIActive();
     BytesMessage createBytesMessage();
     MapMessage createMapMessage();
     Message createMessage();
     ObjectMessage createObjectMessage();
     StreamMessage createStreamMessage();
     TextMessage createTextMessage();
+
 
     //CEP services
     String createCEP(String inputRecordSchemaString, String inputStreamName, String outputStreamName, String outputStreamAttributesString,String queryString);
