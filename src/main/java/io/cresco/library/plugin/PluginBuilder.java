@@ -138,6 +138,7 @@ public class PluginBuilder {
     }
 
     public void receiveRPC(String callId, MsgEvent msg) {
+
         rpc.putReturnMessage(callId, msg);
     }
 

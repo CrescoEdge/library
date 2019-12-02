@@ -94,6 +94,7 @@ public class RPC {
                         rpcMap.remove(callId);
                         return callBack;
                     }
+
                 }
                 Thread.sleep(CHECK_INTERVAL);
             }
@@ -110,6 +111,7 @@ public class RPC {
      * @param returnMessage     The return message
      */
     public void putReturnMessage(String callId, MsgEvent returnMessage) {
+
         synchronized (lock) {
             rpcMap.put(callId, returnMessage);
         }

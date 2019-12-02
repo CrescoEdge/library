@@ -9,6 +9,7 @@ public interface AgentService {
 	AgentState getAgentState();
 	DataPlaneService getDataPlaneService();
 	CLogger getCLogger(PluginBuilder pluginBuilder, String baseClassName, String issuingClassName, CLogger.Level level);
+	CLogger getCLogger(PluginBuilder pluginBuilder, String baseClassName, String issuingClassName);
 	void msgOut(String id, MsgEvent msg);
 	void setLogLevel(String logId, CLogger.Level level);
 }

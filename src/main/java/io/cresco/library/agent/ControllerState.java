@@ -20,7 +20,8 @@ public class ControllerState {
 		setPreInit();
 	}
 
-	public synchronized boolean isActive() {
+	public boolean isActive() {
+
 			return (currentMode == Mode.AGENT) || (currentMode == Mode.GLOBAL) || (currentMode == Mode.REGION_GLOBAL);
 	}
 
@@ -90,7 +91,7 @@ public class ControllerState {
 		return localRegion + "_" + localAgent;
 	}
 
-	public synchronized boolean setPreInit() {
+	public boolean setPreInit() {
 
 		//pull last known agent and region name from the database
 		Map<String, String> lastCState = controllerStatePersistance.getStateMap();
@@ -116,7 +117,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setAgentShutdown(String desc) {
+	public boolean setAgentShutdown(String desc) {
 
 		if(controllerStatePersistance.setControllerState(Mode.AGENT_SHUTDOWN, desc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)){
 
@@ -129,7 +130,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setAgentFailed(String regionalRegion, String regionalAgent, String desc) {
+	public boolean setAgentFailed(String regionalRegion, String regionalAgent, String desc) {
 			currentMode = Mode.AGENT_FAILED;
 			currentDesc = desc;
 			this.globalAgent = null;
@@ -144,7 +145,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setAgentSuccess(String regionalRegion, String regionalAgent, String desc) {
+	public boolean setAgentSuccess(String regionalRegion, String regionalAgent, String desc) {
 			currentMode = Mode.AGENT;
 			currentDesc = desc;
 			this.globalAgent = null;
@@ -159,7 +160,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setAgentInit(String regionName, String agentName, String desc) {
+	public boolean setAgentInit(String regionName, String agentName, String desc) {
 			currentMode = Mode.AGENT_INIT;
 			currentDesc = desc;
 			this.localAgent = agentName;
@@ -177,7 +178,7 @@ public class ControllerState {
 
 	}
 
-	public synchronized boolean setRegionInit(String regionName, String agentName, String desc) {
+	public boolean setRegionInit(String regionName, String agentName, String desc) {
 			currentMode = Mode.REGION_INIT;
 			currentDesc = desc;
 			localRegion = regionName;
@@ -194,7 +195,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setRegionSuccess(String regionName, String agentName, String desc) {
+	public boolean setRegionSuccess(String regionName, String agentName, String desc) {
 			currentMode = Mode.REGION;
 			currentDesc = desc;
 			localRegion = regionName;
@@ -211,7 +212,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setRegionGlobalInit(String desc) {
+	public boolean setRegionGlobalInit(String desc) {
 			currentMode = Mode.REGION_GLOBAL_INIT;
 			currentDesc = desc;
 			this.globalAgent = null;
@@ -226,7 +227,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setRegionFailed(String desc) {
+	public boolean setRegionFailed(String desc) {
 			currentMode = Mode.REGION_FAILED;
 			currentDesc = desc;
 			this.globalAgent = null;
@@ -241,7 +242,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setGlobalSuccess(String desc) {
+	public boolean setGlobalSuccess(String desc) {
 			currentMode = Mode.GLOBAL;
 			currentDesc = desc;
 			this.globalRegion = localRegion;
@@ -258,7 +259,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setGlobalInit(String desc) {
+	public boolean setGlobalInit(String desc) {
 			currentMode = Mode.GLOBAL_INIT;
 			currentDesc = desc;
 			this.regionalAgent = localAgent;
@@ -273,7 +274,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setGlobalFailed(String desc) {
+	public boolean setGlobalFailed(String desc) {
 			currentMode = Mode.GLOBAL_FAILED;
 			currentDesc = desc;
 			this.regionalAgent = localAgent;
@@ -288,7 +289,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setGlobalShutdown(String desc) {
+	public boolean setGlobalShutdown(String desc) {
 
 		if(controllerStatePersistance.setControllerState(Mode.GLOBAL_SHUTDOWN, desc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 				currentMode = Mode.GLOBAL_SHUTDOWN;
@@ -300,7 +301,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setRegionalGlobalSuccess(String globalRegion, String globalAgent, String desc) {
+	public boolean setRegionalGlobalSuccess(String globalRegion, String globalAgent, String desc) {
 			currentMode = Mode.REGION_GLOBAL;
 			currentDesc = desc;
 			this.globalRegion = globalRegion;
@@ -313,7 +314,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setRegionShutdown(String desc) {
+	public boolean setRegionShutdown(String desc) {
 
 		if(controllerStatePersistance.setControllerState(Mode.REGION_SHUTDOWN, desc, globalRegion, globalAgent, regionalRegion, regionalAgent, localRegion, localAgent)) {
 				currentMode = Mode.REGION_SHUTDOWN;
@@ -325,7 +326,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setRegionalGlobalFailed(String desc) {
+	public boolean setRegionalGlobalFailed(String desc) {
 			currentMode = Mode.REGION_GLOBAL_FAILED;
 			currentDesc = desc;
 			globalAgent = null;
@@ -338,7 +339,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setStandaloneInit(String region, String agent, String desc) {
+	public boolean setStandaloneInit(String region, String agent, String desc) {
 			currentMode = Mode.STANDALONE_INIT;
 			currentDesc = desc;
 			localAgent = agent;
@@ -355,7 +356,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setStandaloneSuccess(String region, String agent, String desc) {
+	public boolean setStandaloneSuccess(String region, String agent, String desc) {
 			currentMode = Mode.STANDALONE;
 			currentDesc = desc;
 			localAgent = agent;
@@ -372,7 +373,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setStandaloneFailed(String region, String agent, String desc) {
+	public boolean setStandaloneFailed(String region, String agent, String desc) {
 			currentMode = Mode.STANDALONE_FAILED;
 			currentDesc = desc;
 			localAgent = agent;
@@ -389,7 +390,7 @@ public class ControllerState {
 		}
 	}
 
-	public synchronized boolean setStandaloneShutdown(String desc) {
+	public boolean setStandaloneShutdown(String desc) {
 			currentMode = Mode.STANDALONE_SHUTDOWN;
 			currentDesc = desc;
 
