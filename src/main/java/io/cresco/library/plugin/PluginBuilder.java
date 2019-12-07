@@ -157,7 +157,7 @@ public class PluginBuilder {
 
     public String getPluginDataDirectory() {
         if(getPluginID() != null) {
-            return agentService.getAgentDataDirectory() + "/" + getPluginID();
+            return agentService.getAgentDataDirectory() + "/plugin-data/" + getPluginID();
         } else {
             return agentService.getAgentDataDirectory();
         }
