@@ -16,6 +16,7 @@ import java.math.BigInteger;
 import java.net.JarURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -153,6 +154,11 @@ public class PluginBuilder {
         //return new CLogger(this,baseClassName,issuingClassName,level);
         return agentService.getCLogger(this,baseClassName,issuingClassName,level);
     }
+
+    public String getPluginDataDirectory() {
+        return agentService.getAgentDataDirectory() + "/" + getPluginID();
+    }
+
     public boolean isIPv6() { return false; }
 
     public MsgEvent sendRPC(MsgEvent msg) {
