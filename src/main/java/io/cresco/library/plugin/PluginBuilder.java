@@ -156,7 +156,11 @@ public class PluginBuilder {
     }
 
     public String getPluginDataDirectory() {
-        return agentService.getAgentDataDirectory() + "/" + getPluginID();
+        if(getPluginID() != null) {
+            return agentService.getAgentDataDirectory() + "/" + getPluginID();
+        } else {
+            return agentService.getAgentDataDirectory();
+        }
     }
 
     public boolean isIPv6() { return false; }
