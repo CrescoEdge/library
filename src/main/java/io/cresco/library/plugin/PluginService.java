@@ -7,6 +7,7 @@ public interface PluginService {
 	boolean inMsg(MsgEvent incoming);
 	boolean isStarted();
 	boolean isStopped();
-
+	boolean isActive();
+	void setIsActive(boolean isActive);
 
 }
