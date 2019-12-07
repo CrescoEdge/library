@@ -12,4 +12,5 @@ public interface AgentService {
 	CLogger getCLogger(PluginBuilder pluginBuilder, String baseClassName, String issuingClassName);
 	void msgOut(String id, MsgEvent msg);
 	void setLogLevel(String logId, CLogger.Level level);
+	String getAgentDataDirectory();
 }
