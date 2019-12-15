@@ -78,19 +78,6 @@
         </exclusions>
     </dependency>
 
-
-    <dependency>
-        <groupId>org.apache.avro</groupId>
-        <artifactId>avro</artifactId>
-        <version>${avro.version}</version>
-        <exclusions>
-            <exclusion>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-api</artifactId>
-            </exclusion>
-        </exclusions>
-    </dependency>
-
     <dependency>
         <groupId>org.apache.geronimo.specs</groupId>
         <artifactId>geronimo-jms_1.1_spec</artifactId>
@@ -142,12 +129,7 @@
                     <Embed-Dependency>!org.osgi.*;*</Embed-Dependency>
                     <Export-Package>
                         javax.jms.*;
-                        org.apache.avro.*;
-                        org.tukaani.*;
-                        org.apache.commons.compress.*;
-                        org.xerial.snappy.*;
                         com.thoughtworks.*;
-                        org.codehaus.jackson.*;
                         com.codahale.metrics.*;
                         org.LatencyUtils;
                         io.micrometer.*;

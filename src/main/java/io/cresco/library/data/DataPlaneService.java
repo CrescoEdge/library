@@ -24,7 +24,7 @@ public interface DataPlaneService {
 
     //CEP services
     String createCEP(String inputRecordSchemaString, String inputStreamName, String outputStreamName, String outputStreamAttributesString,String queryString);
-    void input(String cepId, String streamName, String jsonPayload);
+    void inputCEP(String streamName, String jsonPayload);
     boolean removeCEP(String cepId);
 
     //sending file messages
