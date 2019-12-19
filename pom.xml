@@ -90,11 +90,141 @@
         <version>1.0.1</version>
     </dependency>
 
+
+    <!-- CEP -->
     <dependency>
         <groupId>io.siddhi</groupId>
         <artifactId>siddhi-core</artifactId>
         <version>${siddhi.version}</version>
+        <exclusions>
+            <exclusion>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>org.quartz-scheduler.wso2</groupId>
+                <artifactId>quartz</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>com.jayway.jsonpath</groupId>
+                <artifactId>json-path</artifactId>
+            </exclusion>
+        </exclusions>
     </dependency>
+
+
+
+    <dependency>
+        <groupId>com.jayway.jsonpath</groupId>
+        <artifactId>json-path</artifactId>
+        <version>2.4.0</version>
+        <exclusions>
+            <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+
+    <dependency>
+        <groupId>org.quartz-scheduler.wso2</groupId>
+        <artifactId>quartz</artifactId>
+        <version>2.1.1.wso2v1</version>
+        <exclusions>
+            <exclusion>
+                <groupId>org.quartz-scheduler</groupId>
+                <artifactId>quartz</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+
+    <dependency>
+        <groupId>org.quartz-scheduler</groupId>
+        <artifactId>quartz</artifactId>
+        <version>2.1.1</version>
+        <exclusions>
+            <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>c3p0</groupId>
+                <artifactId>c3p0</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+
+    <dependency>
+        <groupId>c3p0</groupId>
+        <artifactId>c3p0</artifactId>
+        <version>0.9.1.1</version>
+    </dependency>
+
+    <dependency>
+        <groupId>io.siddhi.extension.map.json</groupId>
+        <artifactId>siddhi-map-json</artifactId>
+        <version>5.0.6</version>
+        <exclusions>
+            <exclusion>
+                <groupId>org.apache.log4j.wso2</groupId>
+                <artifactId>log4j</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>org.wso2.orbit.org.apache.tapestry</groupId>
+                <artifactId>tapestry-json</artifactId>
+            </exclusion>
+        </exclusions>
+
+    </dependency>
+
+
+    <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>2.9.10.1</version>
+        <exclusions>
+            <exclusion>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+
+    <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>2.9.10</version>
+    </dependency>
+
+    <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+        <version>2.9.10</version>
+
+    </dependency>
+
+    <dependency>
+        <groupId>org.wso2.orbit.org.apache.tapestry</groupId>
+        <artifactId>tapestry-json</artifactId>
+        <version>5.4.1.wso2v1</version>
+    </dependency>
+
 
 
 </dependencies>
@@ -132,6 +262,7 @@
                         com.lmax.disruptor.*;
                         org.antlr.v4.runtime.*;
                         org.quartz.*;
+                        com.google.common.*;
                         javax.jms.*;
                         com.thoughtworks.*;
                         com.codahale.metrics.*;
@@ -169,6 +300,51 @@
                 </plugins>
             </build>
         </profile>
+
+        <profile>
+            <id>allow-snapshots</id>
+            <activation><activeByDefault>true</activeByDefault></activation>
+            <repositories>
+
+                <repository>
+                    <id>snapshots-repo</id>
+                    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+                    <releases><enabled>false</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </repository>
+
+                <repository>
+                    <id>wso2-maven2-repository</id>
+                    <name>WSO2 Maven2 Repository</name>
+                    <url>http://dist.wso2.org/maven2</url>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                    <releases>
+                        <enabled>true</enabled>
+                        <updatePolicy>never</updatePolicy>
+                        <checksumPolicy>fail</checksumPolicy>
+                    </releases>
+                </repository>
+
+
+                <repository>
+                    <id>wso2.releases</id>
+                    <name>WSO2 internal Repository</name>
+                    <url>http://maven.wso2.org/nexus/content/repositories/releases/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                        <updatePolicy>daily</updatePolicy>
+                        <checksumPolicy>ignore</checksumPolicy>
+                    </releases>
+                </repository>
+
+
+            </repositories>
+
+
+        </profile>
+
     </profiles>
 
 
