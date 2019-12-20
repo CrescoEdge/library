@@ -10,21 +10,18 @@ public class AgentState implements Serializable {
      */
     private static final long serialVersionUID = 5117254163782139591L;
 
-
     public String getRegion() { return controllerState.getRegion();}
 
     public String getAgent() { return controllerState.getAgent();}
     public boolean isActive() { return controllerState.isActive(); }
 
-    public ControllerState.Mode getControllerState() {return controllerState.getControllerState(); }
+    public ControllerMode getControllerState() {return controllerState.getControllerState(); }
 
     private ControllerState controllerState;
 
     public AgentState(ControllerState controllerState) {
         this.controllerState = controllerState;
     }
-
-
 
     public void sendMessage(String message) {
         System.out.println("Message From Agent: remote_id:" + message);
