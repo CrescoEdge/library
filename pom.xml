@@ -286,7 +286,6 @@
                     <Import-Package>*;resolution:=optional</Import-Package>
                     <Embed-Dependency>!org.osgi.*;*</Embed-Dependency>
                     <Export-Package>
-                        com.google.code.gson.*;
                         io.siddhi.*;
                         org.atteo.classindex.*;
                         com.lmax.disruptor.*;
