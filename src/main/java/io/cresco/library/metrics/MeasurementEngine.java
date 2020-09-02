@@ -44,6 +44,10 @@ public class MeasurementEngine {
 
     }
 
+    public CrescoMeterRegistry getCrescoMeterRegistry() {
+        return crescoMeterRegistry;
+    }
+
     public List<Map<String,String>> getMetricGroupList(String group) {
         List<Map<String,String>> returnList = null;
         try {
