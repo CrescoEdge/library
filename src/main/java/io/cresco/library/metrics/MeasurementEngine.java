@@ -6,6 +6,7 @@ import io.cresco.library.plugin.PluginBuilder;
 import io.cresco.library.utilities.CLogger;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Timer;
 
 import java.io.PrintWriter;
@@ -291,6 +292,45 @@ public class MeasurementEngine {
 
     public Gauge getGaugeRaw(String name) {
             return this.crescoMeterRegistry.get(name).gauge();
+    }
+
+    public CMetric.MeasureClass getMeasureClass(Meter.Type meterType) {
+
+        CMetric.MeasureClass measureClass = null;
+        try {
+
+            switch (meterType) {
+
+                case COUNTER:
+                    measureClass = CMetric.MeasureClass.COUNTER;
+                    break;
+                case DISTRIBUTION_SUMMARY:
+                    measureClass = CMetric.MeasureClass.DISTRIBUTION_SUMMARY;
+                    break;
+                case TIMER:
+                    measureClass = CMetric.MeasureClass.TIMER;
+                    break;
+                case GAUGE:
+                    measureClass = CMetric.MeasureClass.GAUGE_DOUBLE;
+
+            }
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return measureClass;
+    }
+
+    public void setExisting(String name, String group) {
+
+        Meter m = crescoMeterRegistry.get(name).meter();
+
+        if(m != null) {
+
+            metricMap.put(name,new CMetric(name,m.getId().getDescription(),group,getMeasureClass(m.getId().getType())));
+
+        }
+
     }
 
 }
