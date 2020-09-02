@@ -293,5 +293,4 @@ public class MeasurementEngine {
             return this.crescoMeterRegistry.get(name).gauge();
     }
 
-
 }
