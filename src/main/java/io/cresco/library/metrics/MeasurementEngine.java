@@ -108,7 +108,12 @@ public class MeasurementEngine {
                     metricValueMap.put("name",metric.name);
                     metricValueMap.put("class",metric.getMeterTypeString());
                     metricValueMap.put("type",metric.type.toString());
-                    metricValueMap.put("value",String.valueOf(gaugeMapDouble.get(metric.name).get()));
+                    //if value not in map, treat like auto, this is an issue due to many to one mapping
+                    if(gaugeMapDouble.containsKey(metric.name)) {
+                        metricValueMap.put("value", String.valueOf(gaugeMapDouble.get(metric.name).get()));
+                    } else {
+                        metricValueMap.put("value",String.valueOf(crescoMeterRegistry.get(metric.name).gauge().value()));
+                    }
                     break;
 
                 case GAUGE_AUTO:
