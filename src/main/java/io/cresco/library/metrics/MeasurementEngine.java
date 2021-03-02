@@ -157,6 +157,11 @@ public class MeasurementEngine {
         return metricValueMap;
     }
 
+    public void shutdown() {
+
+        crescoMeterRegistry.close();
+
+    }
     public Boolean setDistributionSummary(String name, String description, String group) {
 
         if(metricMap.containsKey(name)) {
