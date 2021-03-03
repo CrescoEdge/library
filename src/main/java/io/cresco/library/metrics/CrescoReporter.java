@@ -511,6 +511,7 @@ public class CrescoReporter implements Reporter, Closeable {
             this.timeUnits = timeUnits;
             this.registered = new ConcurrentHashMap<ObjectName, ObjectName>();
             this.objectNameFactory = objectNameFactory;
+
         }
 
         private void registerMBean(Object mBean, ObjectName objectName) throws InstanceAlreadyExistsException, JMException {
@@ -528,6 +529,7 @@ public class CrescoReporter implements Reporter, Closeable {
         private void unregisterMBean(ObjectName originalObjectName) throws InstanceNotFoundException, MBeanRegistrationException {
             ObjectName storedObjectName = registered.remove(originalObjectName);
             if (storedObjectName != null) {
+
                 mBeanServer.unregisterMBean(storedObjectName);
             } else {
                 mBeanServer.unregisterMBean(originalObjectName);
