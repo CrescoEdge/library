@@ -433,6 +433,7 @@ public class CrescoReporter implements Reporter, Closeable {
             this.metric = metric;
             this.durationFactor = 1.0 / durationUnit.toNanos(1);
             this.durationUnit = durationUnit.toString().toLowerCase(Locale.US);
+
         }
 
         @Override
@@ -506,14 +507,18 @@ public class CrescoReporter implements Reporter, Closeable {
         private List<ObjectName> beanList;
         private AtomicBoolean lockBean = new AtomicBoolean();
 
+        private Map<String,Timer> timerList;
+        private AtomicBoolean lockTimer = new AtomicBoolean();
+
         private JmxListener(MBeanServer mBeanServer, String name, MetricFilter filter, CrescoReporter.MetricTimeUnits timeUnits, ObjectNameFactory objectNameFactory) {
             this.mBeanServer = mBeanServer;
             this.name = name;
             this.filter = filter;
             this.timeUnits = timeUnits;
-            this.registered = new ConcurrentHashMap<ObjectName, ObjectName>();
+            this.registered = new ConcurrentHashMap<>();
             this.objectNameFactory = objectNameFactory;
             beanList = Collections.synchronizedList(new ArrayList<>());
+            timerList = new ConcurrentHashMap<>();
         }
 
         private void registerMBean(Object mBean, ObjectName objectName) throws InstanceAlreadyExistsException, JMException {
@@ -676,6 +681,10 @@ public class CrescoReporter implements Reporter, Closeable {
                     synchronized (lockBean) {
                         beanList.add(objectName);
                     }
+                    synchronized (lockTimer) {
+                        timerList.put(name,timer);
+                    }
+
                 }
             } catch (InstanceAlreadyExistsException e) {
                 LOGGER.debug("Unable to register timer", e);
@@ -691,6 +700,10 @@ public class CrescoReporter implements Reporter, Closeable {
                 unregisterMBean(objectName);
                 synchronized (lockBean) {
                     beanList.remove(objectName);
+                }
+                synchronized (lockTimer) {
+                    Timer timer = timerList.remove(name);
+                    timer.time().close();
                 }
             } catch (InstanceNotFoundException e) {
                 LOGGER.debug("Unable to unregister timer", e);
