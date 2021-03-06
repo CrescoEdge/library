@@ -495,6 +495,7 @@ public class CrescoReporter implements Reporter, Closeable {
         public String getDurationUnit() {
             return durationUnit;
         }
+
     }
 
     private static class JmxListener implements MetricRegistryListener {
@@ -739,6 +740,12 @@ public class CrescoReporter implements Reporter, Closeable {
                 }
             }
             beanList.clear();
+
+            for (String name : timerList.keySet()) {
+                Timer timer = timerList.remove(name);
+                timer.time().close();
+            }
+            registered.clear();
         }
     }
 
