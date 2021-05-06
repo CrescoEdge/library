@@ -2,17 +2,17 @@ package io.cresco.library.metrics;
 
 
 import com.codahale.metrics.*;
+import com.codahale.metrics.Timer;
 import io.cresco.library.plugin.PluginBuilder;
 import io.cresco.library.utilities.CLogger;
 
 import javax.management.*;
 import java.io.Closeable;
 import java.lang.management.ManagementFactory;
-import java.util.Collections;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A reporter which listens for new metrics and exposes them as namespaced MBeans.
@@ -433,6 +433,7 @@ public class CrescoReporter implements Reporter, Closeable {
             this.metric = metric;
             this.durationFactor = 1.0 / durationUnit.toNanos(1);
             this.durationUnit = durationUnit.toString().toLowerCase(Locale.US);
+
         }
 
         @Override
@@ -494,6 +495,7 @@ public class CrescoReporter implements Reporter, Closeable {
         public String getDurationUnit() {
             return durationUnit;
         }
+
     }
 
     private static class JmxListener implements MetricRegistryListener {
@@ -503,15 +505,21 @@ public class CrescoReporter implements Reporter, Closeable {
         private final CrescoReporter.MetricTimeUnits timeUnits;
         private final Map<ObjectName, ObjectName> registered;
         private final ObjectNameFactory objectNameFactory;
+        private List<ObjectName> beanList;
+        private AtomicBoolean lockBean = new AtomicBoolean();
+
+        private Map<String,Timer> timerList;
+        private AtomicBoolean lockTimer = new AtomicBoolean();
 
         private JmxListener(MBeanServer mBeanServer, String name, MetricFilter filter, CrescoReporter.MetricTimeUnits timeUnits, ObjectNameFactory objectNameFactory) {
             this.mBeanServer = mBeanServer;
             this.name = name;
             this.filter = filter;
             this.timeUnits = timeUnits;
-            this.registered = new ConcurrentHashMap<ObjectName, ObjectName>();
+            this.registered = new ConcurrentHashMap<>();
             this.objectNameFactory = objectNameFactory;
-
+            beanList = Collections.synchronizedList(new ArrayList<>());
+            timerList = new ConcurrentHashMap<>();
         }
 
         private void registerMBean(Object mBean, ObjectName objectName) throws InstanceAlreadyExistsException, JMException {
@@ -542,6 +550,10 @@ public class CrescoReporter implements Reporter, Closeable {
                 if (filter.matches(name, gauge)) {
                     final ObjectName objectName = createName("gauges", name);
                     registerMBean(new CrescoReporter.JmxGauge(gauge, objectName), objectName);
+                    synchronized (lockBean) {
+                        beanList.add(objectName);
+                    }
+
                 }
             } catch (InstanceAlreadyExistsException e) {
                 LOGGER.debug("Unable to register gauge", e);
@@ -555,6 +567,9 @@ public class CrescoReporter implements Reporter, Closeable {
             try {
                 final ObjectName objectName = createName("gauges", name);
                 unregisterMBean(objectName);
+                synchronized (lockBean) {
+                    beanList.remove(objectName);
+                }
             } catch (InstanceNotFoundException e) {
                 LOGGER.debug("Unable to unregister gauge", e);
             } catch (MBeanRegistrationException e) {
@@ -568,6 +583,9 @@ public class CrescoReporter implements Reporter, Closeable {
                 if (filter.matches(name, counter)) {
                     final ObjectName objectName = createName("counters", name);
                     registerMBean(new CrescoReporter.JmxCounter(counter, objectName), objectName);
+                    synchronized (lockBean) {
+                        beanList.add(objectName);
+                    }
                 }
             } catch (InstanceAlreadyExistsException e) {
                 LOGGER.debug("Unable to register counter", e);
@@ -581,6 +599,9 @@ public class CrescoReporter implements Reporter, Closeable {
             try {
                 final ObjectName objectName = createName("counters", name);
                 unregisterMBean(objectName);
+                synchronized (lockBean) {
+                    beanList.remove(objectName);
+                }
             } catch (InstanceNotFoundException e) {
                 LOGGER.debug("Unable to unregister counter", e);
             } catch (MBeanRegistrationException e) {
@@ -594,6 +615,9 @@ public class CrescoReporter implements Reporter, Closeable {
                 if (filter.matches(name, histogram)) {
                     final ObjectName objectName = createName("histograms", name);
                     registerMBean(new CrescoReporter.JmxHistogram(histogram, objectName), objectName);
+                    synchronized (lockBean) {
+                        beanList.add(objectName);
+                    }
                 }
             } catch (InstanceAlreadyExistsException e) {
                 LOGGER.debug("Unable to register histogram", e);
@@ -607,6 +631,9 @@ public class CrescoReporter implements Reporter, Closeable {
             try {
                 final ObjectName objectName = createName("histograms", name);
                 unregisterMBean(objectName);
+                synchronized (lockBean) {
+                    beanList.remove(objectName);
+                }
             } catch (InstanceNotFoundException e) {
                 LOGGER.debug("Unable to unregister histogram", e);
             } catch (MBeanRegistrationException e) {
@@ -620,6 +647,9 @@ public class CrescoReporter implements Reporter, Closeable {
                 if (filter.matches(name, meter)) {
                     final ObjectName objectName = createName("meters", name);
                     registerMBean(new CrescoReporter.JmxMeter(meter, objectName, timeUnits.rateFor(name)), objectName);
+                    synchronized (lockBean) {
+                        beanList.add(objectName);
+                    }
                 }
             } catch (InstanceAlreadyExistsException e) {
                 LOGGER.debug("Unable to register meter", e);
@@ -633,6 +663,9 @@ public class CrescoReporter implements Reporter, Closeable {
             try {
                 final ObjectName objectName = createName("meters", name);
                 unregisterMBean(objectName);
+                synchronized (lockBean) {
+                    beanList.remove(objectName);
+                }
             } catch (InstanceNotFoundException e) {
                 LOGGER.debug("Unable to unregister meter", e);
             } catch (MBeanRegistrationException e) {
@@ -646,6 +679,13 @@ public class CrescoReporter implements Reporter, Closeable {
                 if (filter.matches(name, timer)) {
                     final ObjectName objectName = createName("timers", name);
                     registerMBean(new CrescoReporter.JmxTimer(timer, objectName, timeUnits.rateFor(name), timeUnits.durationFor(name)), objectName);
+                    synchronized (lockBean) {
+                        beanList.add(objectName);
+                    }
+                    synchronized (lockTimer) {
+                        timerList.put(name,timer);
+                    }
+
                 }
             } catch (InstanceAlreadyExistsException e) {
                 LOGGER.debug("Unable to register timer", e);
@@ -659,6 +699,13 @@ public class CrescoReporter implements Reporter, Closeable {
             try {
                 final ObjectName objectName = createName("timers", name);
                 unregisterMBean(objectName);
+                synchronized (lockBean) {
+                    beanList.remove(objectName);
+                }
+                synchronized (lockTimer) {
+                    Timer timer = timerList.remove(name);
+                    timer.time().close();
+                }
             } catch (InstanceNotFoundException e) {
                 LOGGER.debug("Unable to unregister timer", e);
             } catch (MBeanRegistrationException e) {
@@ -671,6 +718,7 @@ public class CrescoReporter implements Reporter, Closeable {
         }
 
         void unregisterAll() {
+
             for (ObjectName name : registered.keySet()) {
                 try {
                     unregisterMBean(name);
@@ -679,6 +727,23 @@ public class CrescoReporter implements Reporter, Closeable {
                 } catch (MBeanRegistrationException e) {
                     LOGGER.warn("Unable to unregister metric", e);
                 }
+            }
+            registered.clear();
+
+            for (ObjectName name : beanList) {
+                try {
+                    unregisterMBean(name);
+                } catch (InstanceNotFoundException e) {
+                    LOGGER.debug("Unable to unregister metric", e);
+                } catch (MBeanRegistrationException e) {
+                    LOGGER.warn("Unable to unregister metric", e);
+                }
+            }
+            beanList.clear();
+
+            for (String name : timerList.keySet()) {
+                Timer timer = timerList.remove(name);
+                timer.time().close();
             }
             registered.clear();
         }
@@ -735,7 +800,36 @@ public class CrescoReporter implements Reporter, Closeable {
     public void stop() {
         registry.removeListener(listener);
         listener.unregisterAll();
+        //printBeans();
     }
+
+    /*
+    public void printBeans() {
+
+        MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+
+        Set<ObjectInstance> instances = server.queryMBeans(null, null);
+
+        Iterator<ObjectInstance> iterator = instances.iterator();
+
+        while (iterator.hasNext()) {
+            ObjectInstance instance = iterator.next();
+            System.out.println("MBean Found:");
+            System.out.println("Class Name:t" + instance.getClassName());
+            System.out.println("Object Name:t" + instance.getObjectName());
+            System.out.println("****************************************");
+            try {
+                if(instance.getClassName().contains(".apache."))
+                server.unregisterMBean(instance.getObjectName());
+            } catch (InstanceNotFoundException e) {
+                e.printStackTrace();
+            } catch (MBeanRegistrationException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+     */
 
     /**
      * Stops the reporter.

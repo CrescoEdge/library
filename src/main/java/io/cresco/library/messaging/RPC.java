@@ -43,6 +43,7 @@ public class RPC {
     /**
      * Issues a remote procedure call
      * @param msg           Message to send
+     * @param timeout       How long to wait for the response (in milliseconds)
      * @return              The return message, null if no return is received
      */
     public MsgEvent call(MsgEvent msg, long timeout) {
