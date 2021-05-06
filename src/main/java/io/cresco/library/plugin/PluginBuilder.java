@@ -362,6 +362,7 @@ public class PluginBuilder {
             InputStream is = null;
             JarInputStream jarStream = null;
 
+            
             try {
 
                 if(jarFile.contains("!")) {
