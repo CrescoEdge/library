@@ -358,18 +358,25 @@ public class PluginBuilder {
     public String getPluginVersion(String jarFile) {
         String version = null;
         try{
-            File file = new File(jarFile);
 
-            boolean calcHash = true;
-            BasicFileAttributes attr = Files.readAttributes(file.toPath(), BasicFileAttributes.class);
-            long fileTime = attr.creationTime().toMillis();
-
-            FileInputStream fis = null;
+            InputStream is = null;
             JarInputStream jarStream = null;
 
             try {
-                fis = new FileInputStream(file);
-                jarStream = new JarInputStream(fis);
+
+                if(jarFile.contains("!")) {
+                    jarFile = jarFile.replace("\\","/");
+                    jarFile = "jar:file:/" + jarFile;
+                    URL inputURL = new URL(jarFile);
+                    JarURLConnection conn = (JarURLConnection)inputURL.openConnection();
+                    is = conn.getInputStream();
+
+                } else {
+                    Path path = Paths.get(jarFile);
+                    is = new FileInputStream(path.toFile());
+                }
+
+                jarStream = new JarInputStream(is);
                 Manifest mf = jarStream.getManifest();
 
                 if (mf != null) {
@@ -386,8 +393,8 @@ public class PluginBuilder {
                     jarStream.close();
                 }
 
-                if(fis != null) {
-                    fis.close();
+                if(is != null) {
+                    is.close();
                 }
             }
         }
