@@ -8,5 +8,4 @@ public interface CoreState {
 	public boolean restartController();
 	public boolean restartFramework();
 	public boolean killJVM();
-
 }
