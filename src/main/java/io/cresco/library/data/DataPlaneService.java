@@ -20,7 +20,7 @@ public interface DataPlaneService {
     ObjectMessage createObjectMessage();
     StreamMessage createStreamMessage();
     TextMessage createTextMessage();
-
+    DataMessage createDataMessage();
 
     //CEP services
     String createCEP(String inputRecordSchemaString, String inputStreamName, String outputStreamName, String outputStreamAttributesString,String queryString);
