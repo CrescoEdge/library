@@ -5,9 +5,9 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import javax.jms.JMSException;
-import javax.jms.Message;
 
 public interface DataMessage extends Message {
+
     InputStream getInputStream() throws IOException, JMSException;
 
     URL getURL() throws MalformedURLException, JMSException;
