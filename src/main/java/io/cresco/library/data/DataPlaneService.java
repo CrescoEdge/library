@@ -21,6 +21,10 @@ public interface DataPlaneService {
     StreamMessage createStreamMessage();
     TextMessage createTextMessage();
 
+    //Dealing with binary streaming messages
+    Message createMessage(InputStream inputStream);
+    InputStream getInputMessageStream(Message message);
+
     //CEP services
     String createCEP(String inputRecordSchemaString, String inputStreamName, String outputStreamName, String outputStreamAttributesString,String queryString);
     void inputCEP(String streamName, String jsonPayload);
