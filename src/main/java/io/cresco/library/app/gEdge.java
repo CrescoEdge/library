@@ -6,6 +6,7 @@ import java.util.Map;
 
 public class gEdge {
 
+
 	  public String edge_id;
 	  public String node_from;
 	  public String node_to;
