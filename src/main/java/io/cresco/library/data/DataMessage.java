@@ -6,7 +6,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import javax.jms.JMSException;
 
-public interface DataMessage extends Message {
+public interface DataMessage extends DMessage {
 
     InputStream getInputStream() throws IOException, JMSException;
 

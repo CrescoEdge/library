@@ -1,5 +1,5 @@
 package io.cresco.library.data;
 
-public interface Message extends javax.jms.Message {
+public interface DMessage extends javax.jms.Message {
     String getJMSXMimeType();
 }
