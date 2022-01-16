@@ -13,6 +13,7 @@ public interface DataPlaneService {
     String addMessageListener(TopicType topicType, MessageListener messageListener, String selectorString);
     void removeMessageListener(String listenerId);
     boolean sendMessage(TopicType topicType, Message message);
+    boolean sendMessage(TopicType topicType, Message message, DeliveryMode deliveryMode, int priority, int timeToLive);
     boolean isFaultURIActive();
     BytesMessage createBytesMessage();
     MapMessage createMapMessage();
