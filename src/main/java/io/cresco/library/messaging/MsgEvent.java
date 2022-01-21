@@ -370,6 +370,9 @@ public class MsgEvent {
             return new Scanner(is,"UTF-8").useDelimiter("\\A").next();
         } catch (IOException e) {
             return null;
+        } finally {
+            is.close();
+            iss.close();
         }
     }
 
