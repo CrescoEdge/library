@@ -426,6 +426,7 @@ public class PluginBuilder {
                     hashString = getMD5(in);
                 }
 
+                in.close();
 
             } else {
 
@@ -452,6 +453,8 @@ public class PluginBuilder {
                 if (inputStream != null) {
                     hashString = getMD5(inputStream);
                 }
+
+                inputStream.close();
 
             }
 
