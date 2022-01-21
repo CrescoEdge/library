@@ -365,14 +365,12 @@ public class MsgEvent {
         try {
             //byte[] exportDataRawCompressed = DatatypeConverter.parseBase64Binary(value);
             byte[] exportDataRawCompressed = Base64.getDecoder().decode(value);
-            InputStream iss = new ByteArrayInputStream(exportDataRawCompressed);
-            InputStream is = new GZIPInputStream(iss);
-            return new Scanner(is,"UTF-8").useDelimiter("\\A").next();
+            try (InputStream iss = new ByteArrayInputStream(exportDataRawCompressed);
+                    InputStream is = new GZIPInputStream(iss);) {
+                return new Scanner(is,"UTF-8").useDelimiter("\\A").next();
+            }
         } catch (IOException e) {
             return null;
-        } finally {
-            is.close();
-            iss.close();
         }
     }
 
