@@ -9,6 +9,9 @@ import java.util.Map;
 
 public interface DataPlaneService {
 
+    //update
+    void updateConnections(String URI);
+
     //sending messages on DP
     String addMessageListener(TopicType topicType, MessageListener messageListener, String selectorString);
     void removeMessageListener(String listenerId);
