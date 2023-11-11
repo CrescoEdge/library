@@ -11,8 +11,14 @@ public class AgentState implements Serializable {
     private static final long serialVersionUID = 5117254163782139591L;
 
     public String getRegion() { return controllerState.getRegion();}
-
     public String getAgent() { return controllerState.getAgent();}
+
+    public String getRegionalRegion() { return controllerState.getRegionalRegion();}
+    public String getRegionalAgent() { return controllerState.getRegionalAgent();}
+
+    public String getGlobalRegion() { return controllerState.getGlobalRegion();}
+    public String getGlobalAgent() { return controllerState.getGlobalAgent();}
+    
     public boolean isActive() { return controllerState.isActive(); }
 
     public ControllerMode getControllerState() {return controllerState.getControllerState(); }
