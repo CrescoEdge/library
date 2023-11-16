@@ -399,6 +399,7 @@ public class MsgEvent {
         return compressedData;
     }
 
+    
     public byte[] stringCompress(String str) {
 
         byte[] dataToCompress = str.getBytes(StandardCharsets.UTF_8);
