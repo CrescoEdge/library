@@ -341,7 +341,7 @@ public class MsgEvent {
 
     public void setCompressedDataParam(String key, byte[] value) {
         //params.put(key, DatatypeConverter.printBase64Binary(value));
-        params.put(key,Base64.getEncoder().encodeToString(value));
+        params.put(key,Base64.getEncoder().encodeToString(dataCompress(value)));
     }
 
     public byte[] getDataParam(String key) {

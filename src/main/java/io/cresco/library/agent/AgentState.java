@@ -18,7 +18,7 @@ public class AgentState implements Serializable {
 
     public String getGlobalRegion() { return controllerState.getGlobalRegion();}
     public String getGlobalAgent() { return controllerState.getGlobalAgent();}
-    
+
     public boolean isActive() { return controllerState.isActive(); }
 
     public ControllerMode getControllerState() {return controllerState.getControllerState(); }
