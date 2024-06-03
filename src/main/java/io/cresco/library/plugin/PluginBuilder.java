@@ -159,6 +159,14 @@ public class PluginBuilder {
         }
     }
 
+    public boolean isIPv6() {
+        boolean isv6 = false;
+        if(config != null) {
+            isv6 = config.getBooleanParam("ipv6", false);
+        }
+        return isv6;
+    }
+
     public MsgEvent sendRPC(MsgEvent msg) {
         msg.setParam("is_rpc",Boolean.TRUE.toString());
         return this.rpc.call(msg);
