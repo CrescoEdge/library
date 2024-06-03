@@ -10,13 +10,9 @@ import org.osgi.framework.ServiceReference;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigInteger;
 import java.net.JarURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -162,8 +158,6 @@ public class PluginBuilder {
             return agentService.getAgentDataDirectory();
         }
     }
-
-    public boolean isIPv6() { return false; }
 
     public MsgEvent sendRPC(MsgEvent msg) {
         msg.setParam("is_rpc",Boolean.TRUE.toString());
