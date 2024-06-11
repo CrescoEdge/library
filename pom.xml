@@ -6,7 +6,7 @@
 
     <groupId>io.cresco</groupId>
     <artifactId>library</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.2-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Cresco Library</name>
@@ -41,11 +41,11 @@
 
 <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jdk>1.8</jdk>
-    <maven.compiler.version>3.8.1</maven.compiler.version>
+    <jdk>21</jdk>
+    <maven.compiler.version>3.13.0</maven.compiler.version>
+    <maven.bundle.compiler.version>5.1.9</maven.bundle.compiler.version>
     <maven.javadoc.version>3.2.0</maven.javadoc.version>
     <maven.source.version>3.2.1</maven.source.version>
-    <maven.bundle.compiler.version>4.2.1</maven.bundle.compiler.version>
     <micrometer.version>1.0.8</micrometer.version>
     <siddhi.version>5.1.2</siddhi.version>
 
