@@ -1,6 +1,6 @@
 package io.cresco.library.data;
 
-import javax.jms.*;
+import jakarta.jms.*;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Path;
