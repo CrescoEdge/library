@@ -1,5 +1,6 @@
 package io.cresco.library.data;
 
+import io.cresco.library.messaging.MsgEvent;
 import jakarta.jms.*;
 import java.io.File;
 import java.io.InputStream;
@@ -16,6 +17,7 @@ public interface DataPlaneService {
     String addMessageListener(TopicType topicType, MessageListener messageListener, String selectorString);
     void removeMessageListener(String listenerId);
     boolean sendMessage(TopicType topicType, Message message);
+    boolean sendMessage(MsgEvent.Type msgEventType, TopicType topicType, Message message);
     boolean sendMessage(TopicType topicType, Message message, int deliveryMode, int priority, int timeToLive);
     boolean isFaultURIActive();
     BytesMessage createBytesMessage();
