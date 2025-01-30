@@ -3,6 +3,7 @@ package io.cresco.library.metrics;
 
 import com.codahale.metrics.*;
 import com.codahale.metrics.Timer;
+import com.codahale.metrics.jmx.ObjectNameFactory;
 import io.cresco.library.plugin.PluginBuilder;
 import io.cresco.library.utilities.CLogger;
 

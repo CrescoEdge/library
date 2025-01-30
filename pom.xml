@@ -46,7 +46,7 @@
     <maven.bundle.compiler.version>5.1.9</maven.bundle.compiler.version>
     <maven.javadoc.version>3.2.0</maven.javadoc.version>
     <maven.source.version>3.2.1</maven.source.version>
-    <micrometer.version>1.14.3</micrometer.version>
+    <micrometer.version>1.12.13</micrometer.version>
     <siddhi.version>5.1.2</siddhi.version>
 
 </properties>
