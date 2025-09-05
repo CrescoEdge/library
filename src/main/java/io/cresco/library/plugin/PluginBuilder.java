@@ -181,6 +181,10 @@ public class PluginBuilder {
         return getMsgEvent(type, getRegion(),getAgent(), null,true,true);
     }
 
+    public MsgEvent getGlobalControllerMsgEvent(MsgEvent.Type type, String region, String agent) {
+        return getMsgEvent(type, region, agent, null,true,true);
+    }
+
     public MsgEvent getGlobalAgentMsgEvent(MsgEvent.Type type, String dstRegion, String dstAgent) {
         return getMsgEvent(type, dstRegion,dstAgent, null,false,false);
     }
@@ -197,6 +201,10 @@ public class PluginBuilder {
         return getMsgEvent(type,getRegion(), getAgent(), null,true,false);
     }
 
+    public MsgEvent getRegionalControllerMsgEvent(MsgEvent.Type type, String region, String agent) {
+        return getMsgEvent(type, region, agent, null,true,false);
+    }
+
     public MsgEvent getRegionalAgentMsgEvent(MsgEvent.Type type, String dstAgent) {
         return getMsgEvent(type,getRegion(), dstAgent, null,false,false);
     }
@@ -208,6 +216,7 @@ public class PluginBuilder {
     public MsgEvent getAgentMsgEvent(MsgEvent.Type type) {
         return getMsgEvent(type,getRegion(), getAgent(), null,false,false);
     }
+
 
     public MsgEvent getPluginMsgEvent(MsgEvent.Type type, String dstPlugin) {
         return getMsgEvent(type,getRegion(),getAgent(),dstPlugin,false,false);
