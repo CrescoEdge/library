@@ -217,7 +217,6 @@ public class PluginBuilder {
         return getMsgEvent(type,getRegion(), getAgent(), null,false,false);
     }
 
-
     public MsgEvent getPluginMsgEvent(MsgEvent.Type type, String dstPlugin) {
         return getMsgEvent(type,getRegion(),getAgent(),dstPlugin,false,false);
     }
