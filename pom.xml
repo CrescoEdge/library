@@ -4,9 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.cresco</groupId>
+    <parent>
+        <groupId>io.cresco</groupId>
+        <artifactId>cresco-parent</artifactId>
+        <version>1.2-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
+
     <artifactId>library</artifactId>
-    <version>1.2-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Cresco Library</name>
@@ -40,24 +45,19 @@
 
 
 <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jdk>21</jdk>
-    <maven.compiler.version>3.13.0</maven.compiler.version>
-    <maven.bundle.compiler.version>5.1.9</maven.bundle.compiler.version>
+    <!-- jdk, encoding, compiler/bundle plugin versions inherited from cresco-parent -->
     <maven.javadoc.version>3.2.0</maven.javadoc.version>
     <maven.source.version>3.2.1</maven.source.version>
     <micrometer.version>1.12.13</micrometer.version>
     <siddhi.version>5.1.2</siddhi.version>
-
 </properties>
 
 <dependencies>
 
-    <!-- https://mvnrepository.com/artifact/org.osgi/osgi.core -->
+    <!-- OSGi API version managed by cresco-parent -->
     <dependency>
         <groupId>org.osgi</groupId>
         <artifactId>org.osgi.core</artifactId>
-        <version>6.0.0</version>
         <scope>provided</scope>
     </dependency>
 
@@ -238,7 +238,6 @@
     <dependency>
         <groupId>com.google.code.gson</groupId>
         <artifactId>gson</artifactId>
-        <version>2.8.9</version>
     </dependency>
 
     <dependency>
@@ -283,15 +282,7 @@
 <build>
     <plugins>
 
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>${maven.compiler.version}</version>
-            <configuration>
-                <source>${jdk}</source>
-                <target>${jdk}</target>
-            </configuration>
-        </plugin>
+        <!-- maven-compiler-plugin configuration (source/target 21) inherited from cresco-parent -->
 
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
@@ -330,8 +321,7 @@
         <plugin>
             <groupId>org.apache.felix</groupId>
             <artifactId>maven-bundle-plugin</artifactId>
-            <version>${maven.bundle.compiler.version}</version>
-            <extensions>true</extensions>
+            <!-- version + extensions inherited from cresco-parent pluginManagement -->
             <configuration>
                 <instructions>
                     <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
@@ -339,7 +329,18 @@
                     <Bundle-Description>Library for Cresco</Bundle-Description>
                     <Bundle-Vendor>Cresco.io</Bundle-Vendor>
                     <Bundle-Version>${project.version}-${maven.build.timestamp}</Bundle-Version>
-                    <Import-Package>*;resolution:=optional</Import-Package>
+                    <!--
+                      This is the shared uber-bundle: it embeds and re-exports the common
+                      runtime (Siddhi, Micrometer, JMS API, etc.) that plugins compile against.
+                      The OSGi framework packages are hard requirements (fail-fast if absent);
+                      the long tail of optional references inside embedded libraries stays
+                      optional so the bundle still resolves without them.
+                    -->
+                    <Import-Package>
+                        org.osgi.framework,
+                        org.osgi.framework.*,
+                        *;resolution:=optional
+                    </Import-Package>
                     <Embed-Dependency>!org.osgi.*;*</Embed-Dependency>
                     <Export-Package>
                         io.siddhi.*;
@@ -349,13 +350,15 @@
                         org.quartz.*;
                         com.google.common.*;
                         jakarta.jms.*;
-                        com.thoughtworks.*;
                         com.codahale.metrics.*;
                         org.LatencyUtils;
                         io.micrometer.*;
                         io.cresco.library.*
                     </Export-Package>
-                    <Bundle-RequiredExecutionEnvironment>JavaSE-1.8</Bundle-RequiredExecutionEnvironment>
+                    <!-- this bundle has no DS components; do not emit an osgi.component extender requirement -->
+                    <_dsannotations></_dsannotations>
+                    <!-- two quartz jars on the embed path provide overlapping packages -->
+                    <_split-package>merge-first</_split-package>
                 </instructions>
             </configuration>
         </plugin>
