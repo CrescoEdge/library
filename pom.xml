@@ -54,10 +54,10 @@
 
 <dependencies>
 
-    <!-- OSGi API version managed by cresco-parent -->
+    <!-- OSGi R8 core API (managed by cresco-parent) -->
     <dependency>
         <groupId>org.osgi</groupId>
-        <artifactId>org.osgi.core</artifactId>
+        <artifactId>osgi.core</artifactId>
         <scope>provided</scope>
     </dependency>
 
