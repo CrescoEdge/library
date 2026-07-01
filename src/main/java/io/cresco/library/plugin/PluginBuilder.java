@@ -7,6 +7,7 @@ import io.cresco.library.metrics.CrescoMeterRegistry;
 import io.cresco.library.utilities.CLogger;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
+import org.osgi.util.tracker.ServiceTracker;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,7 +32,13 @@ import java.util.jar.Manifest;
 
 public class PluginBuilder {
 
+    // When the plugin looks AgentService up from the registry it is tracked (not cached once),
+    // so the plugin re-acquires the current AgentService if the controller restarts. When the
+    // agent injects its own AgentService directly, the field below is used instead.
     private AgentService agentService;
+    private ServiceTracker<AgentService, AgentService> agentServiceTracker;
+    private BundleContext bundleContext;
+    private static final long AGENT_SERVICE_WAIT_MS = 30000L;
     private Config config;
     private CrescoMeterRegistry crescoMeterRegistry;
     private String baseClassName;
@@ -52,26 +59,18 @@ public class PluginBuilder {
         String identString = null;
 
         if(agentService == null) {
-            //init agent services
-            ServiceReference sr = context.getServiceReference(AgentService.class.getName());
-            if (sr != null) {
-                boolean assign = sr.isAssignableTo(context.getBundle(), AgentService.class.getName());
-
-                if (assign) {
-                    boolean isAssigned = false;
-                    while(!isAssigned) {
-                        try {
-                            this.agentService = (AgentService) context.getService(sr);
-                            isAssigned = true;
-                        } catch (Exception ex) {
-                            System.out.println("Failed AgentService Assignment");
-                        }
-                    }
-                } else {
-                    System.out.println("Could not assign AgentService!");
+            // Track AgentService dynamically instead of a one-shot lookup + busy-wait cast loop.
+            this.bundleContext = context;
+            this.agentServiceTracker = new ServiceTracker<>(context, AgentService.class, null);
+            this.agentServiceTracker.open();
+            try {
+                AgentService initial = agentServiceTracker.waitForService(AGENT_SERVICE_WAIT_MS);
+                if (initial == null) {
+                    System.out.println("PluginBuilder: AgentService not available after "
+                            + AGENT_SERVICE_WAIT_MS + "ms");
                 }
-            } else {
-                System.out.println("Can't Find :" + AgentService.class.getName());
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
             }
         } else {
             identString = "agent";
@@ -95,22 +94,55 @@ public class PluginBuilder {
 
     }
 
+    /**
+     * Current AgentService: the tracked service if this PluginBuilder looked it up from the
+     * registry (re-acquired on controller restart), otherwise the directly-injected one.
+     * Waits briefly if the tracked service is momentarily unavailable.
+     */
+    private AgentService agentService() {
+        if (agentServiceTracker != null) {
+            AgentService svc = agentServiceTracker.getService();
+            if (svc == null) {
+                try {
+                    svc = agentServiceTracker.waitForService(AGENT_SERVICE_WAIT_MS);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            return svc;
+        }
+        return agentService;
+    }
+
+    /** Close the AgentService tracker; call from the plugin's stop path to avoid leaking trackers across reloads. */
+    public void close() {
+        try {
+            if (agentServiceTracker != null) {
+                agentServiceTracker.close();
+                agentServiceTracker = null;
+            }
+        } catch (Exception ex) {
+            /* ignore */
+        }
+    }
+
     public void setLogLevel(String logId, CLogger.Level level) {
-        if(agentService != null) {
-            agentService.setLogLevel(logId,level);
+        AgentService as = agentService();
+        if(as != null) {
+            as.setLogLevel(logId,level);
         }
     }
 
     public AgentService getAgentService() {
-        return agentService;
+        return agentService();
     }
 
     public Config getConfig() { return config;}
     public void setConfig(Map<String,Object> configMap) {
         this.config = new Config(configMap);
     }
-    public String getAgent() { return agentService.getAgentState().getAgent(); }
-    public String getRegion() { return agentService.getAgentState().getRegion(); }
+    public String getAgent() { return agentService().getAgentState().getAgent(); }
+    public String getRegion() { return agentService().getAgentState().getRegion(); }
     public String getPluginID() { return config.getStringParam("pluginID"); }
 
     public void msgIn(MsgEvent message) {
@@ -141,21 +173,21 @@ public class PluginBuilder {
 
     public void msgOut(MsgEvent msg) {
 
-        agentService.msgOut(getPluginID(), msg);
+        agentService().msgOut(getPluginID(), msg);
 
     }
     public CrescoMeterRegistry getCrescoMeterRegistry() { return crescoMeterRegistry; }
 
     public CLogger getLogger(String issuingClassName, CLogger.Level level) {
         //return new CLogger(this,baseClassName,issuingClassName,level);
-        return agentService.getCLogger(this,baseClassName,issuingClassName,level);
+        return agentService().getCLogger(this,baseClassName,issuingClassName,level);
     }
 
     public String getPluginDataDirectory() {
         if(getPluginID() != null) {
-            return agentService.getAgentDataDirectory() + "/plugin-data/" + getPluginID();
+            return agentService().getAgentDataDirectory() + "/plugin-data/" + getPluginID();
         } else {
-            return agentService.getAgentDataDirectory();
+            return agentService().getAgentDataDirectory();
         }
     }
 
