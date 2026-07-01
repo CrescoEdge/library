@@ -26,4 +26,13 @@ public interface CLogger {
 	public void trace(String logMessage);
 	public void trace(String logMessage, Object ... params);
 
+	// Exception-aware overloads: log the message plus the full stack trace via the logging
+	// framework (replaces ex.printStackTrace()). The Throwable overload is more specific than
+	// the (String, Object...) varargs one, so logger.error("msg", ex) binds here.
+	public void error(String logMessage, Throwable throwable);
+	public void warn(String logMessage, Throwable throwable);
+	public void info(String logMessage, Throwable throwable);
+	public void debug(String logMessage, Throwable throwable);
+	public void trace(String logMessage, Throwable throwable);
+
 }

@@ -3,6 +3,9 @@ package io.cresco.library.messaging;
 //import javax.xml.bind.DatatypeConverter;
 //import javax.xml.bind.annotation.XmlRootElement;
 //import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -11,6 +14,9 @@ import java.util.zip.GZIPOutputStream;
 
 //@XmlRootElement
 public class MsgEvent {
+
+    private static final Logger log = LoggerFactory.getLogger(MsgEvent.class);
+
     public enum Type {
         CONFIG, DISCOVER, ERROR, EXEC, GC, INFO, KPI, LOG, WATCHDOG
     }
@@ -263,7 +269,7 @@ public class MsgEvent {
             }
             fileList.add(filePath);
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("addFile", ex);
         }
     }
 
@@ -322,7 +328,7 @@ public class MsgEvent {
             }
             pathList.add(pathMap);
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("addPath", ex);
         }
     }
 
@@ -353,7 +359,7 @@ public class MsgEvent {
                 byteArray = Base64.getDecoder().decode(value);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("getDataParam", e);
         }
         return byteArray;
     }

@@ -1,10 +1,15 @@
 package io.cresco.library.agent;
 
 import io.cresco.library.messaging.MsgEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 
 public class AgentState implements Serializable {
+
+    private static final Logger log = LoggerFactory.getLogger(AgentState.class);
+
     /**
      * Only needed for ECF generic transport
      */
@@ -30,7 +35,7 @@ public class AgentState implements Serializable {
     }
 
     public void sendMessage(String message) {
-        System.out.println("Message From Agent: remote_id:" + message);
+        log.debug("Message From Agent: remote_id:{}", message);
     }
 
     public void msgIn(String msg) {
@@ -41,7 +46,7 @@ public class AgentState implements Serializable {
     public void msgIn(MsgEvent msg) {
         //    logger.trace("msgIn : " + msg.getParams().toString());
         //    msgInProcessQueue.submit(new MsgRoute(this, msg));
-        System.out.println("MESSAGE IN AGENT!!! " + msg.getParams().toString());
+        log.debug("MESSAGE IN AGENT!!! {}", msg.getParams().toString());
 
     }
 

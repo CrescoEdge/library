@@ -1,11 +1,16 @@
 package io.cresco.library.data;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class FileObject {
+
+    private static final Logger log = LoggerFactory.getLogger(FileObject.class);
 
     private Map<String,String> filePartMapSource;
     private Map<String,String> filePartMapDest;
@@ -42,7 +47,7 @@ public class FileObject {
             }
 
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("setDestFilePart", ex);
         }
 
         return isPartSet;
@@ -74,7 +79,7 @@ public class FileObject {
             }
 
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("isFilePartComplete", ex);
         }
         return isComplete;
     }
@@ -90,7 +95,7 @@ public class FileObject {
             }
 
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("getOrderedPartList", ex);
         }
         return orderedPartList;
     }

@@ -9,8 +9,6 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Timer;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,10 +59,7 @@ public class MeasurementEngine {
                 }
             }
         } catch(Exception ex) {
-            logger.error(ex.getMessage());
-            StringWriter sw = new StringWriter();
-            ex.printStackTrace(new PrintWriter(sw));
-            logger.error(sw.toString());
+            logger.error("getMetricGroupList", ex);
         }
         return returnList;
     }
@@ -149,10 +144,7 @@ public class MeasurementEngine {
             }
 
         } catch(Exception ex) {
-            logger.error(ex.getMessage());
-            StringWriter sw = new StringWriter();
-            ex.printStackTrace(new PrintWriter(sw));
-            logger.error(sw.toString());
+            logger.error("writeMetricMap", ex);
         }
         return metricValueMap;
     }
@@ -252,9 +244,7 @@ public class MeasurementEngine {
 
             }
         } catch (Exception ex) {
-            StringWriter sw = new StringWriter();
-            ex.printStackTrace(new PrintWriter(sw));
-            logger.error(sw.toString());
+            logger.error("setGauge", ex);
         }
         return isSet;
 
@@ -326,7 +316,7 @@ public class MeasurementEngine {
             }
 
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logger.error("getMeasureClass", ex);
         }
         return measureClass;
     }

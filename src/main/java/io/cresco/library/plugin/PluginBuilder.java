@@ -8,6 +8,8 @@ import io.cresco.library.utilities.CLogger;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.util.tracker.ServiceTracker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,6 +33,8 @@ import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
 
 public class PluginBuilder {
+
+    private static final Logger log = LoggerFactory.getLogger(PluginBuilder.class);
 
     // When the plugin looks AgentService up from the registry it is tracked (not cached once),
     // so the plugin re-acquires the current AgentService if the controller restarts. When the
@@ -66,8 +70,7 @@ public class PluginBuilder {
             try {
                 AgentService initial = agentServiceTracker.waitForService(AGENT_SERVICE_WAIT_MS);
                 if (initial == null) {
-                    System.out.println("PluginBuilder: AgentService not available after "
-                            + AGENT_SERVICE_WAIT_MS + "ms");
+                    log.error("PluginBuilder: AgentService not available after {}ms", AGENT_SERVICE_WAIT_MS);
                 }
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
@@ -259,7 +262,7 @@ public class PluginBuilder {
         try {
             msg = new MsgEvent(type, getRegion(),getAgent(),getPluginID(),dstRegion,dstAgent,dstPlugin,isRegional ,isGlobal);
         } catch(Exception ex) {
-            ex.printStackTrace();
+            log.error("getMsgEvent", ex);
         }
         return msg;
     }
@@ -343,12 +346,12 @@ public class PluginBuilder {
 
                     }
                 } else {
-                        System.out.println("Executor == null " + msg.printHeader() + " plugin: " + getPluginID());
+                        log.error("Executor == null {} plugin: {}", msg.printHeader(), getPluginID());
                     }
                 }
 
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("MessageProcessor.run", e);
             }
         }
     }
@@ -378,7 +381,7 @@ public class PluginBuilder {
                     }
                 }
             } catch(Exception ex) {
-                ex.printStackTrace();
+                log.error("getPluginName", ex);
             } finally {
 
                 if(jarStream != null) {
@@ -392,7 +395,7 @@ public class PluginBuilder {
         }
         catch(Exception ex)
         {
-            ex.printStackTrace();
+            log.error("getPluginName", ex);
         }
         return version;
     }
@@ -429,7 +432,7 @@ public class PluginBuilder {
                     }
                 }
             } catch(Exception ex) {
-                ex.printStackTrace();
+                log.error("getPluginVersion", ex);
             } finally {
 
                 if(jarStream != null) {
@@ -443,7 +446,7 @@ public class PluginBuilder {
         }
         catch(Exception ex)
         {
-            ex.printStackTrace();
+            log.error("getPluginVersion", ex);
 
         }
         return version;
@@ -500,7 +503,7 @@ public class PluginBuilder {
             }
 
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("getMD5", ex);
         }
         //return complete hash
         return hashString;
@@ -542,7 +545,7 @@ public class PluginBuilder {
             }
 
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("getMD5", ex);
         }
         //return complete hash
         return hashString;
@@ -576,7 +579,7 @@ public class PluginBuilder {
                             pluginMap.put("version",pluginVersion);
                             pluginFiles.add(pluginMap);
                         } catch(Exception ex) {
-                            ex.printStackTrace();
+                            log.error("getPluginInventory", ex);
                         }
 
                     }

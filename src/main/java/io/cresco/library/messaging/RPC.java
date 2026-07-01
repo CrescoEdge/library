@@ -68,8 +68,7 @@ public class RPC {
                 Thread.sleep(CHECK_INTERVAL);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error("call {}", ex.getMessage());
+            logger.error("call", ex);
         }
         return null;
     }
@@ -100,8 +99,7 @@ public class RPC {
                 Thread.sleep(CHECK_INTERVAL);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error("call {}", ex.getMessage());
+            logger.error("call", ex);
         }
         return null;
     }

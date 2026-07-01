@@ -54,6 +54,14 @@
 
 <dependencies>
 
+    <!-- SLF4J API (framework-exported at runtime; provided for compilation of formal logging) -->
+    <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>2.0.6</version>
+        <scope>provided</scope>
+    </dependency>
+
     <!-- OSGi R8 core API (managed by cresco-parent) -->
     <dependency>
         <groupId>org.osgi</groupId>
@@ -339,9 +347,11 @@
                     <Import-Package>
                         org.osgi.framework,
                         org.osgi.framework.*,
+                        org.slf4j,
+                        org.slf4j.*,
                         *;resolution:=optional
                     </Import-Package>
-                    <Embed-Dependency>!org.osgi.*;*</Embed-Dependency>
+                    <Embed-Dependency>!org.osgi.*;!slf4j-api;*</Embed-Dependency>
                     <Export-Package>
                         io.siddhi.*;
                         org.atteo.classindex.*;

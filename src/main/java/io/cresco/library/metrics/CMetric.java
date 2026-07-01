@@ -2,8 +2,12 @@ package io.cresco.library.metrics;
 
 
 import io.micrometer.core.instrument.Meter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CMetric {
+
+	  private static final Logger log = LoggerFactory.getLogger(CMetric.class);
 
 	  public String name;
 	  public String description;
@@ -77,7 +81,7 @@ public class CMetric {
 			}
 
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			log.error("getMeterType", ex);
 		}
 		return meterType;
 	}
