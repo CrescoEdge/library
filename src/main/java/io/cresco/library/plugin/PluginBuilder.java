@@ -43,6 +43,13 @@ public class PluginBuilder {
     private ServiceTracker<AgentService, AgentService> agentServiceTracker;
     private BundleContext bundleContext;
     private static final long AGENT_SERVICE_WAIT_MS = 30000L;
+
+    /**
+     * The OSGi BundleContext of the bundle hosting this PluginBuilder (the controller or a plugin).
+     * Used to register/track OSGi services such as {@code org.apache.felix.hc.api.HealthCheck}.
+     * May be null if the builder was constructed with a directly-injected AgentService.
+     */
+    public BundleContext getBundleContext() { return bundleContext; }
     private Config config;
     private CrescoMeterRegistry crescoMeterRegistry;
     private String baseClassName;
@@ -59,6 +66,11 @@ public class PluginBuilder {
 
         this.msgInProcessQueue = Executors.newCachedThreadPool();
 
+        // Always retain the BundleContext. Both construction paths (injected AgentService and the
+        // tracked-AgentService path below) need it — e.g. the controller registers HealthCheck OSGi
+        // services through it. Previously it was set only in the tracked path, so the controller's
+        // getBundleContext() returned null and the health executor could not start.
+        this.bundleContext = context;
 
         String identString = null;
 
