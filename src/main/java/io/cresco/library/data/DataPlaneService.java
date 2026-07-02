@@ -19,6 +19,26 @@ public interface DataPlaneService {
     boolean sendMessage(TopicType topicType, Message message);
     boolean sendMessage(MsgEvent.Type msgEventType, TopicType topicType, Message message);
     boolean sendMessage(TopicType topicType, Message message, int deliveryMode, int priority, int timeToLive);
+
+    // --- Dataplane sharding (multi-node throughput) ---
+    // A topic type may be split into N shard-topics (e.g. global.event.0..N-1) so that ActiveMQ
+    // per-destination demand-forwarding can spread traffic across parallel inter-broker connectors,
+    // lifting the single-connection cross-node ceiling. Publisher and subscriber must derive the SAME
+    // shard from a shared routing key (e.g. the stream ident). Default methods delegate to the
+    // unsharded path so any implementation and any caller stays correct when sharding is off (N=1).
+    default int getDataPlaneShardCount() { return 1; }
+    default String addMessageListener(TopicType topicType, MessageListener messageListener, String selectorString, int shard) {
+        return addMessageListener(topicType, messageListener, selectorString);
+    }
+    default boolean sendMessage(TopicType topicType, Message message, int deliveryMode, int priority, int timeToLive, int shard) {
+        return sendMessage(topicType, message, deliveryMode, priority, timeToLive);
+    }
+    // Derive a stable shard index from a routing key. Same key -> same shard on both endpoints.
+    default int shardFor(String routingKey) {
+        int n = getDataPlaneShardCount();
+        if (n <= 1 || routingKey == null) return 0;
+        return Math.floorMod(routingKey.hashCode(), n);
+    }
     boolean isFaultURIActive();
     BytesMessage createBytesMessage();
     MapMessage createMapMessage();
