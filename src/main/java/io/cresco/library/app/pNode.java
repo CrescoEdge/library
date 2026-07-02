@@ -34,13 +34,16 @@ public class pNode {
 	}
 
 	public void addRepos(List<Map<String, String>> repoServers) {
-
-	      for(Map<String,String> server : repoServers) {
-	        if(!repoServers.contains(server)) {
-	            repoServers.add(server);
-            }
-          }
-
+	    // Previously iterated the PARAMETER and added back into it (a no-op self-add that also risks
+	    // ConcurrentModificationException). Merge into this.repoServers instead.
+	    if (repoServers == null) {
+	        return;
+	    }
+	    for (Map<String, String> server : repoServers) {
+	        if (!this.repoServers.contains(server)) {
+	            this.repoServers.add(server);
+	        }
+	    }
 	}
 
 	public boolean isEqual (String name, String jarfile, String version, String md5) {

@@ -34,7 +34,6 @@ public class MsgEvent {
 
     //msgparams constants
     private static final String HAS_OUTGOING_FILES = "HAS_OUTGOING_FILES";
-    private static final String IS_PATH_TRACE = "IS_PATH_TRACE";
 
 
 
@@ -47,7 +46,6 @@ public class MsgEvent {
     private List<String> fileList;
 
     //for path trace
-    private List<Map<String,String>> pathList;
 
     public MsgEvent() {
 
@@ -79,22 +77,15 @@ public class MsgEvent {
 
     public MsgEvent(Type msgType, String msgRegion, String msgAgent, String msgPlugin, String msgBody) {
         this.msgType = msgType;
+        // This ctor previously dropped its region/agent/plugin args, leaving src identity null on
+        // every message it built (the discovery workers, PollAddPipeline, PerfMonitorNet). Set src
+        // like the 9-arg ctor does. msgBody is a legacy human-readable description with no accessor.
+        this.src_region = msgRegion;
+        this.src_agent = msgAgent;
+        this.src_plugin = msgPlugin;
         this.params = new HashMap<String, String>();
         msgparams = new HashMap<>();
     }
-
-    /*
-
-    public MsgEvent(Type msgType, String msgRegion, String msgAgent, String msgPlugin, Map<String, String> params) {
-        this.msgType = msgType;
-        //this.msgRegion = msgRegion;
-        //this.msgAgent = msgAgent;
-        //this.msgPlugin = msgPlugin;
-        this.params = params;
-        this.params = new HashMap<String, String>(params);
-        msgparams = new HashMap<>();
-    }
-    */
 
     public boolean isGlobal() {
         return isGlobal;
@@ -301,43 +292,6 @@ public class MsgEvent {
         }
 
         return false;
-    }
-
-    public boolean isPathTrace() {
-
-        if(msgparams.containsKey(IS_PATH_TRACE)) {
-            if(Boolean.parseBoolean(msgparams.get(IS_PATH_TRACE))) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public void setIsPathTrace(Boolean pathTrace) {
-
-        msgparams.put(IS_PATH_TRACE,pathTrace.toString());
-
-    }
-
-    public void addPath(Map<String,String> pathMap) {
-        try {
-            if(pathList == null) {
-                pathList = new ArrayList<>();
-                msgparams.put(IS_PATH_TRACE,Boolean.TRUE.toString());
-            }
-            pathList.add(pathMap);
-        } catch (Exception ex) {
-            log.error("addPath", ex);
-        }
-    }
-
-
-
-    public List<Map<String,String>> getPathList() {
-        List<Map<String,String>> tmpPathList = new ArrayList<>();
-        tmpPathList.addAll(pathList);
-        return tmpPathList;
     }
 
     public void setDataParam(String key, byte[] value) {
