@@ -275,16 +275,11 @@ public class Config {
     public String getConfigAsJSON() {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
-        Iterator it = this.configMap.entrySet().iterator();
-
-        while (it.hasNext()) {
-            String key = (String)it.next();
-            String value = String.valueOf(this.configMap.get(key));
-            sb.append("\"");
-            sb.append(key);
-            sb.append("\":\"");
-            sb.append(value);
-            sb.append("\",");
+        // NOTE: previously cast each Map.Entry to String (guaranteed ClassCastException on any
+        // non-empty config). Iterate entries correctly.
+        for (Map.Entry<String, Object> e : this.configMap.entrySet()) {
+            sb.append("\"").append(e.getKey()).append("\":\"")
+              .append(String.valueOf(e.getValue())).append("\",");
         }
         if (sb.lastIndexOf(",") > -1)
             sb.deleteCharAt(sb.lastIndexOf(","));
