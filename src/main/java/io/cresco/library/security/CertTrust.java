@@ -46,8 +46,11 @@ public final class CertTrust {
                 return false;
             }
 
-            // The CertPath must not itself include a trust anchor; drop any chain elements that are
-            // already anchors so a leaf-signed-directly-by-a-trusted-CA case validates cleanly.
+            // Build the CertPath as leaf..up-to-but-not-including the first trust anchor. The PKIX
+            // CertPath must be an ordered chain terminating just below an anchor and must NOT contain
+            // the anchor itself (nor anything above it — e.g. the self-signed root above a trusted
+            // intermediate CA, which would break path ordering). So walk from the leaf and STOP at the
+            // first cert that is a trust anchor.
             List<X509Certificate> path = new ArrayList<>();
             for (X509Certificate c : chain) {
                 if (c == null) continue;
@@ -55,12 +58,13 @@ public final class CertTrust {
                 for (X509Certificate ca : trustedCAs) {
                     if (c.equals(ca)) { isAnchor = true; break; }
                 }
-                if (!isAnchor) {
-                    path.add(c);
+                if (isAnchor) {
+                    break; // reached a trusted anchor — the path below it is complete
                 }
+                path.add(c);
             }
             if (path.isEmpty()) {
-                // The presented chain was nothing but trusted anchors — the leaf itself is a trusted CA.
+                // The leaf itself is a trusted anchor.
                 return true;
             }
 
