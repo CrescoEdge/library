@@ -64,6 +64,28 @@ public class MeasurementEngine {
         return returnList;
     }
 
+    /**
+     * The full metric inventory of this engine, keyed by group ({@code jvm}, {@code processor},
+     * {@code netlink}, {@code controller}, plugin-specific, ...). Unlike {@link #getMetricGroupList}
+     * this enumerates EVERY metric across all groups, so a single call yields a bundle's entire
+     * Micrometer view — the building block for the unified, cross-bundle metrics inventory.
+     */
+    public Map<String, List<Map<String,String>>> getAllMetrics() {
+        Map<String, List<Map<String,String>>> byGroup = new HashMap<>();
+        try {
+            for (CMetric metric : metricMap.values()) {
+                Map<String,String> mm = writeMetricMap(metric);
+                if (mm != null) {
+                    mm.put("group", metric.group);
+                    byGroup.computeIfAbsent(metric.group, g -> new ArrayList<>()).add(mm);
+                }
+            }
+        } catch (Exception ex) {
+            logger.error("getAllMetrics", ex);
+        }
+        return byGroup;
+    }
+
     public Map<String,String> writeMetricMap(CMetric metric) {
 
         Map<String,String> metricValueMap = null;
