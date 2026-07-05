@@ -49,7 +49,12 @@
     <maven.javadoc.version>3.2.0</maven.javadoc.version>
     <maven.source.version>3.2.1</maven.source.version>
     <micrometer.version>1.12.13</micrometer.version>
-    <siddhi.version>5.1.2</siddhi.version>
+    <!-- Siddhi CEP: core engine + the four subprojects (query-api / query-compiler /
+         annotations) come transitively with siddhi-core. Extensions are pinned below. -->
+    <siddhi.version>5.1.33</siddhi.version>
+    <!-- Siddhi 5.1.33 logs via log4j2; the older 5.0.x execution extensions log via the
+         log4j 1.x API. We embed NO log4j backend — both APIs are bridged to Cresco's slf4j. -->
+    <log4j.version>2.25.4</log4j.version>
 </properties>
 
 <dependencies>
@@ -107,15 +112,23 @@
     </dependency>
     -->
 
-    <!-- CEP -->
+    <!-- CEP core engine (transitively pulls siddhi-query-api, siddhi-query-compiler,
+         siddhi-annotations, antlr4-runtime, guava, disruptor, snakeyaml). We strip every
+         logging backend + the libs Cresco already embeds itself (quartz/json-path/gson/
+         metrics) so each is embedded exactly once. Logging is bridged to slf4j below. -->
     <dependency>
         <groupId>io.siddhi</groupId>
         <artifactId>siddhi-core</artifactId>
         <version>${siddhi.version}</version>
         <exclusions>
+            <!-- log4j2 (5.1.33) — replaced by slf4j bridge below -->
             <exclusion>
-                <groupId>log4j</groupId>
-                <artifactId>log4j</artifactId>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
             </exclusion>
             <exclusion>
                 <groupId>org.slf4j</groupId>
@@ -124,6 +137,11 @@
             <exclusion>
                 <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-core</artifactId>
+            </exclusion>
+            <!-- quartz: 5.1.33 pulls stock 2.3.2; Cresco declares quartz explicitly below -->
+            <exclusion>
+                <groupId>org.quartz-scheduler</groupId>
+                <artifactId>quartz</artifactId>
             </exclusion>
             <exclusion>
                 <groupId>org.quartz-scheduler.wso2</groupId>
@@ -142,10 +160,23 @@
 
 
 
+    <!-- Guava: siddhi-core 5.1.2 shaded guava 23; 5.1.33 pulls guava 33.0.0-jre transitively.
+         Every consumer bundle (controller/wsapi/stunnel) was compiled against the old export
+         and imports com.google.common.* with range [23,24). siddhi 5.1.33's own OSGi range is
+         [23,34), so pinning guava to 23.x satisfies BOTH — the library keeps exporting a 23.x
+         version, no consumer needs rebuilding, and there is zero guava API drift (this is the
+         exact guava line the whole system was already built and tested on). -->
+    <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>23.6.1-jre</version>
+    </dependency>
+
     <dependency>
         <groupId>com.jayway.jsonpath</groupId>
         <artifactId>json-path</artifactId>
-        <version>2.4.0</version>
+        <!-- bumped 2.4.0 -> 2.9.0 to satisfy siddhi-map-json 5.2.5 / execution-json 2.0.11 -->
+        <version>2.9.0</version>
         <exclusions>
             <exclusion>
                 <groupId>org.slf4j</groupId>
@@ -195,7 +226,25 @@
     <dependency>
         <groupId>net.minidev</groupId>
         <artifactId>json-smart</artifactId>
-        <version>2.4.11</version>
+        <!-- bumped 2.4.11 -> 2.5.2 to match json-path 2.9.0 (Siddhi 5.1.33 baseline) -->
+        <version>2.5.2</version>
+        <exclusions>
+            <exclusion>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+
+    <!-- accessors-smart backs json-smart 2.5.x bean (de)serialization (net.minidev.asm.*).
+         json-smart pulls it transitively, but the uber-bundle only embeds DIRECT dependencies
+         (Embed-Transitive is off), so it must be declared here or the Siddhi json @map()
+         fails at runtime with NoClassDefFoundError: net/minidev/asm/FieldFilter. Uses the
+         bundle's asm 9.6. -->
+    <dependency>
+        <groupId>net.minidev</groupId>
+        <artifactId>accessors-smart</artifactId>
+        <version>2.5.2</version>
         <exclusions>
             <exclusion>
                 <groupId>org.ow2.asm</groupId>
@@ -210,38 +259,160 @@
         <version>9.6</version>
     </dependency>
 
+    <!-- ============================================================================
+         Siddhi mapper + execution extensions — embedded into the uber-bundle so every
+         SiddhiQL @map()/function/stream-processor below is available to CEP queries
+         running over the Cresco dataplane. Each strips io.siddhi:* (siddhi-core above is
+         the single source of the engine + subprojects), every log4j backend (bridged to
+         slf4j), and the json/gson libs Cresco already embeds. Docs: docs/cresco-cep-extensions-reference.md
+         ============================================================================ -->
+
+    <!-- MAP: JSON source/sink mapper — @map(type='json') (the mapper the dataplane uses) -->
     <dependency>
         <groupId>io.siddhi.extension.map.json</groupId>
         <artifactId>siddhi-map-json</artifactId>
-        <version>5.0.6</version>
+        <version>5.2.5</version>
         <exclusions>
-            <exclusion>
-                <groupId>org.apache.log4j.wso2</groupId>
-                <artifactId>log4j</artifactId>
-            </exclusion>
-            <exclusion>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-            </exclusion>
-            <exclusion>
-                <groupId>org.wso2.orbit.org.apache.tapestry</groupId>
-                <artifactId>tapestry-json</artifactId>
-            </exclusion>
-            <exclusion>
-                <groupId>com.jayway.jsonpath</groupId>
-                <artifactId>json-path</artifactId>
-            </exclusion>
-            <exclusion>
-                <groupId>net.minidev</groupId>
-                <artifactId>json-smart</artifactId>
-            </exclusion>
-            <exclusion>
-                <groupId>com.google.code.gson</groupId>
-                <artifactId>gson</artifactId>
-            </exclusion>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-api</artifactId></exclusion>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-core</artifactId></exclusion>
+            <exclusion><groupId>org.apache.log4j.wso2</groupId><artifactId>log4j</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-core</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-query-api</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-annotations</artifactId></exclusion>
+            <exclusion><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId></exclusion>
+            <exclusion><groupId>org.wso2.orbit.org.apache.tapestry</groupId><artifactId>tapestry-json</artifactId></exclusion>
+            <exclusion><groupId>com.jayway.jsonpath</groupId><artifactId>json-path</artifactId></exclusion>
+            <exclusion><groupId>net.minidev</groupId><artifactId>json-smart</artifactId></exclusion>
+            <exclusion><groupId>com.google.code.gson</groupId><artifactId>gson</artifactId></exclusion>
         </exclusions>
-
     </dependency>
+
+    <!-- EXECUTION: math — statistical/mathematical scalar functions (measurement) -->
+    <dependency>
+        <groupId>io.siddhi.extension.execution.math</groupId>
+        <artifactId>siddhi-execution-math</artifactId>
+        <version>5.0.5</version>
+        <exclusions>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-api</artifactId></exclusion>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-core</artifactId></exclusion>
+            <exclusion><groupId>org.apache.log4j.wso2</groupId><artifactId>log4j</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-core</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-query-api</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-annotations</artifactId></exclusion>
+        </exclusions>
+    </dependency>
+
+    <!-- EXECUTION: map — in-stream key/value Map objects: createFromJSON/toJSON/put/merge/tokenize -->
+    <dependency>
+        <groupId>io.siddhi.extension.execution.map</groupId>
+        <artifactId>siddhi-execution-map</artifactId>
+        <version>5.0.7</version>
+        <exclusions>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-api</artifactId></exclusion>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-core</artifactId></exclusion>
+            <exclusion><groupId>org.apache.log4j.wso2</groupId><artifactId>log4j</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-core</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-query-api</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-annotations</artifactId></exclusion>
+        </exclusions>
+    </dependency>
+
+    <!-- EXECUTION: json — in-stream JSON getObject/getString/setElement/toObject/isExists -->
+    <dependency>
+        <groupId>io.siddhi.extension.execution.json</groupId>
+        <artifactId>siddhi-execution-json</artifactId>
+        <version>2.0.11</version>
+        <exclusions>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-api</artifactId></exclusion>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-core</artifactId></exclusion>
+            <exclusion><groupId>org.apache.log4j.wso2</groupId><artifactId>log4j</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-core</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-query-api</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-annotations</artifactId></exclusion>
+            <exclusion><groupId>com.jayway.jsonpath</groupId><artifactId>json-path</artifactId></exclusion>
+            <exclusion><groupId>net.minidev</groupId><artifactId>json-smart</artifactId></exclusion>
+        </exclusions>
+    </dependency>
+
+    <!-- EXECUTION: string — str:concat/contains/regexp/substr/trim/upper/lower/... -->
+    <dependency>
+        <groupId>io.siddhi.extension.execution.string</groupId>
+        <artifactId>siddhi-execution-string</artifactId>
+        <version>5.0.12</version>
+        <exclusions>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-api</artifactId></exclusion>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-core</artifactId></exclusion>
+            <exclusion><groupId>org.apache.log4j.wso2</groupId><artifactId>log4j</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-core</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-query-api</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-annotations</artifactId></exclusion>
+        </exclusions>
+    </dependency>
+
+    <!-- EXECUTION: regex — regex:find/group/matches/lookingAt over stream attributes -->
+    <dependency>
+        <groupId>io.siddhi.extension.execution.regex</groupId>
+        <artifactId>siddhi-execution-regex</artifactId>
+        <version>5.0.7</version>
+        <exclusions>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-api</artifactId></exclusion>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-core</artifactId></exclusion>
+            <exclusion><groupId>org.apache.log4j.wso2</groupId><artifactId>log4j</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-core</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-query-api</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-annotations</artifactId></exclusion>
+        </exclusions>
+    </dependency>
+
+    <!-- EXECUTION: time — time:extract/dateDiff/currentTimestamp/timestampInMilliseconds -->
+    <dependency>
+        <groupId>io.siddhi.extension.execution.time</groupId>
+        <artifactId>siddhi-execution-time</artifactId>
+        <version>5.0.8</version>
+        <exclusions>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-api</artifactId></exclusion>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-core</artifactId></exclusion>
+            <exclusion><groupId>org.apache.log4j.wso2</groupId><artifactId>log4j</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-core</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-query-api</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-annotations</artifactId></exclusion>
+        </exclusions>
+    </dependency>
+
+    <!-- EXECUTION: unique — unique:ever/first/length/time/externalTime windows (dedup) -->
+    <dependency>
+        <groupId>io.siddhi.extension.execution.unique</groupId>
+        <artifactId>siddhi-execution-unique</artifactId>
+        <version>5.0.5</version>
+        <exclusions>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-api</artifactId></exclusion>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-core</artifactId></exclusion>
+            <exclusion><groupId>org.apache.log4j.wso2</groupId><artifactId>log4j</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-core</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-query-api</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-annotations</artifactId></exclusion>
+        </exclusions>
+    </dependency>
+
+    <!-- EXECUTION: reorder — reorder:kslack/akslack to fix out-of-order mesh events by timestamp -->
+    <dependency>
+        <groupId>io.siddhi.extension.execution.reorder</groupId>
+        <artifactId>siddhi-execution-reorder</artifactId>
+        <version>5.0.3</version>
+        <exclusions>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-api</artifactId></exclusion>
+            <exclusion><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-core</artifactId></exclusion>
+            <exclusion><groupId>org.apache.log4j.wso2</groupId><artifactId>log4j</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-core</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-query-api</artifactId></exclusion>
+            <exclusion><groupId>io.siddhi</groupId><artifactId>siddhi-annotations</artifactId></exclusion>
+        </exclusions>
+    </dependency>
+
+    <!-- No log4j is embedded: verified that siddhi-core 5.1.33 (2348 classes) and every
+         extension above reference log4j zero times — they log via SLF4J, which Cresco
+         already exports, so Siddhi/extension logs flow straight into Cresco's logger. The
+         log4j exclusions above simply keep the (unused) log4j jars out of the uber-bundle. -->
 
     <dependency>
         <groupId>com.google.code.gson</groupId>
@@ -326,6 +497,35 @@
             </executions>
         </plugin>
 
+        <!-- Produce a log4j-stripped copy of siddhi-core-5.1.33.jar. siddhi-core is a fat
+             jar that shades log4j2 (with its OSGi BundleActivators); those trip the bundle
+             plugin's activator auto-scan. We remove the shaded log4j here and the bundle
+             plugin inlines this clean jar via <Include-Resource>. Runs before packaging. -->
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+                <execution>
+                    <id>strip-log4j-from-siddhi-core</id>
+                    <phase>process-classes</phase>
+                    <goals><goal>run</goal></goals>
+                    <configuration>
+                        <target>
+                            <property name="siddhiJar" value="${settings.localRepository}/io/siddhi/siddhi-core/${siddhi.version}/siddhi-core-${siddhi.version}.jar"/>
+                            <delete dir="${project.build.directory}/siddhi-core-unpacked"/>
+                            <mkdir dir="${project.build.directory}/siddhi-core-unpacked"/>
+                            <unzip src="${siddhiJar}" dest="${project.build.directory}/siddhi-core-unpacked"/>
+                            <delete dir="${project.build.directory}/siddhi-core-unpacked/org/apache/logging/log4j"/>
+                            <delete dir="${project.build.directory}/siddhi-core-unpacked/org/apache/log4j"/>
+                            <delete file="${project.build.directory}/siddhi-core-nolog4j.jar"/>
+                            <zip destfile="${project.build.directory}/siddhi-core-nolog4j.jar" basedir="${project.build.directory}/siddhi-core-unpacked"/>
+                        </target>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+
         <plugin>
             <groupId>org.apache.felix</groupId>
             <artifactId>maven-bundle-plugin</artifactId>
@@ -351,7 +551,17 @@
                         org.slf4j.*,
                         *;resolution:=optional
                     </Import-Package>
-                    <Embed-Dependency>!org.osgi.*;!slf4j-api;*</Embed-Dependency>
+                    <!-- siddhi-core 5.1.33 is a fat jar that shades log4j2 INCLUDING log4j's
+                         OSGi BundleActivator classes. maven-bundle-plugin unconditionally scans
+                         embedded deps for BundleActivators and appends them to Bundle-Activator,
+                         which then fails ("multiple types"). So siddhi-core is excluded from the
+                         embed scan here and instead inlined (below) from a log4j-stripped copy
+                         produced by the antrun 'strip-log4j-from-siddhi-core' execution. -->
+                    <Embed-Dependency>!org.osgi.*;!slf4j-api;!siddhi-core;*</Embed-Dependency>
+                    <!-- inline (@ = explode) the log4j-stripped siddhi-core so io.siddhi.* +
+                         its shaded guava/antlr/disruptor are exported per Export-Package. -->
+                    <Include-Resource>@${project.build.directory}/siddhi-core-nolog4j.jar</Include-Resource>
+                    <_donotcopy>(CVS|\.svn|\.DS_Store|Thumbs\.db|.*org/apache/logging/log4j.*|.*org/apache/log4j.*)</_donotcopy>
                     <Export-Package>
                         io.siddhi.*;
                         org.atteo.classindex.*;
@@ -365,6 +575,10 @@
                         io.micrometer.*;
                         io.cresco.library.*
                     </Export-Package>
+                    <!-- Explicit no-op activator: disables bnd auto-detection, which would
+                         otherwise find the multiple BundleActivator classes that siddhi-core
+                         5.1.33 shades from log4j2 and fail with "multiple types". See NoOpActivator. -->
+                    <Bundle-Activator>io.cresco.library.osgi.NoOpActivator</Bundle-Activator>
                     <!-- this bundle has no DS components; do not emit an osgi.component extender requirement -->
                     <_dsannotations></_dsannotations>
                     <!-- two quartz jars on the embed path provide overlapping packages -->
