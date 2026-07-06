@@ -5,29 +5,33 @@ package io.cresco.library.messaging;
 import io.cresco.library.plugin.PluginBuilder;
 import io.cresco.library.utilities.CLogger;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
- * Cresco remote procedure call helper
+ * Cresco remote procedure call helper.
+ *
+ * Event-driven: each outstanding call registers a {@link CompletableFuture} under its callId and
+ * blocks on it with the caller's timeout. {@link #putReturnMessage} completes that future the instant
+ * the reply lands, so the caller wakes immediately. The previous implementation polled the reply map on
+ * a fixed 100 ms interval, which quantised EVERY round-trip up to the next 100 ms boundary -- a 10 ms
+ * link and a 100 ms link both measured ~100 ms. Cresco harvests link RTT from these calls to drive the
+ * cost model, so that quantisation flattened the very latency differential the router needs to route on.
+ * Immediate wakeup makes the measured RTT reflect the real path latency.
+ *
  * @author V.K. Cody Bumgardner
  * @author Caylin Hickey
  * @since 0.1.0
  */
 public class RPC {
-    /** Time between checks for RPC return message (in milliseconds) */
-    private static final long CHECK_INTERVAL = 100;
-    /** Maximum iterations to check for RPC return message */
-    //set the interval count
-    private static final long MAX_INTERVALS = 300;
+    /** Default RPC timeout (ms) for the no-timeout call(), preserving the old 300 x 100 ms budget. */
+    private static final long DEFAULT_TIMEOUT_MS = 30000;
     /** Cresco logger */
     private CLogger logger;
-    /** Communication channel */
-    private Map<String, MsgEvent> rpcMap;
-    private AtomicBoolean lock = new AtomicBoolean();
-
+    /** Outstanding calls: callId -> future that its reply will complete. */
+    private final ConcurrentHashMap<String, CompletableFuture<MsgEvent>> pending = new ConcurrentHashMap<>();
 
     private PluginBuilder plugin;
     /**
@@ -35,7 +39,6 @@ public class RPC {
      * @param plugin        PluginBuilder
      */
     public RPC(PluginBuilder plugin) {
-        this.rpcMap = Collections.synchronizedMap(new HashMap<>());
         this.plugin = plugin;
         this.logger = plugin.getLogger(RPC.class.getName(),CLogger.Level.Info);
     }
@@ -47,30 +50,22 @@ public class RPC {
      * @return              The return message, null if no return is received
      */
     public MsgEvent call(MsgEvent msg, long timeout) {
+        String callId = java.util.UUID.randomUUID().toString();
+        CompletableFuture<MsgEvent> future = new CompletableFuture<>();
+        pending.put(callId, future);
         try {
-            String callId = java.util.UUID.randomUUID().toString();
             msg.setParam("callId-" + plugin.getRegion() + "-" + plugin.getAgent() + "-" + plugin.getPluginID(), callId);
-
             plugin.msgOut(msg);
-
-            long rounds = timeout/CHECK_INTERVAL;
-
-            int count = 0;
-            while (count++ < rounds) {
-                synchronized (lock) {
-                    if (rpcMap.containsKey(callId)) {
-                        MsgEvent callBack;
-                        callBack = rpcMap.get(callId);
-                        rpcMap.remove(callId);
-                        return callBack;
-                    }
-                }
-                Thread.sleep(CHECK_INTERVAL);
-            }
+            // Block until the reply completes the future (immediate wakeup) or the timeout elapses.
+            return future.get(timeout, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException te) {
+            return null; // no reply within the caller's budget
         } catch (Exception ex) {
             logger.error("call", ex);
+            return null;
+        } finally {
+            pending.remove(callId); // never leak the registration, reply or not
         }
-        return null;
     }
 
     /**
@@ -79,41 +74,20 @@ public class RPC {
      * @return              The return message, null if no return is received
      */
     public MsgEvent call(MsgEvent msg) {
-        try {
-            String callId = java.util.UUID.randomUUID().toString();
-            msg.setParam("callId-" + plugin.getRegion() + "-" + plugin.getAgent() + "-" + plugin.getPluginID(), callId);
-
-            plugin.msgOut(msg);
-
-            int count = 0;
-            while (count++ < MAX_INTERVALS) {
-                synchronized (lock) {
-                    if (rpcMap.containsKey(callId)) {
-                        MsgEvent callBack;
-                        callBack = rpcMap.get(callId);
-                        rpcMap.remove(callId);
-                        return callBack;
-                    }
-
-                }
-                Thread.sleep(CHECK_INTERVAL);
-            }
-        } catch (Exception ex) {
-            logger.error("call", ex);
-        }
-        return null;
+        return call(msg, DEFAULT_TIMEOUT_MS);
     }
 
     /**
-     * Places the return message for retrieval
+     * Places the return message for retrieval — completes the waiting call's future, waking it at once.
      * @param callId            ID of the remote-procedural call
      * @param returnMessage     The return message
      */
     public void putReturnMessage(String callId, MsgEvent returnMessage) {
-
-        synchronized (lock) {
-            rpcMap.put(callId, returnMessage);
+        CompletableFuture<MsgEvent> future = pending.get(callId);
+        if (future != null) {
+            future.complete(returnMessage);
         }
+        // else: late/duplicate reply after timeout+removal — safe to drop.
     }
 
 }
