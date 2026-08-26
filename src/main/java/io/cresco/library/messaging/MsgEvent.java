@@ -318,6 +318,10 @@ public class MsgEvent {
         return byteArray;
     }
 
+    //cap on inflated size: params travel the control plane, so a hostile peer must not
+    //be able to balloon a small gzip payload into an OOM on the receiver
+    private static final long MAX_UNCOMPRESSED_PARAM_BYTES = 128L * 1024 * 1024;
+
     public String getCompressedParam(String key) {
         String value = params.get(key);
         if (value == null)
@@ -327,9 +331,57 @@ public class MsgEvent {
             byte[] exportDataRawCompressed = Base64.getDecoder().decode(value);
             try (InputStream iss = new ByteArrayInputStream(exportDataRawCompressed);
                     InputStream is = new GZIPInputStream(iss);) {
-                return new Scanner(is,"UTF-8").useDelimiter("\\A").next();
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] buffer = new byte[8192];
+                long total = 0;
+                int read;
+                while ((read = is.read(buffer)) != -1) {
+                    total += read;
+                    if (total > MAX_UNCOMPRESSED_PARAM_BYTES) {
+                        log.error("getCompressedParam: uncompressed size for key [" + key
+                                + "] exceeds cap of " + MAX_UNCOMPRESSED_PARAM_BYTES + " bytes, discarding");
+                        return null;
+                    }
+                    out.write(buffer, 0, read);
+                }
+                return out.toString(StandardCharsets.UTF_8.name());
             }
         } catch (IOException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Symmetric reader for {@link #setCompressedDataParam(String, byte[])}: base64-decode then
+     * gunzip. getDataParam() on a compressed param returns the raw gzip bytes, which is never
+     * what a caller wants (it silently corrupts binary transfers). Bounded like
+     * getCompressedParam so a hostile payload cannot balloon into an OOM.
+     */
+    public byte[] getCompressedDataParam(String key) {
+        String value = params.get(key);
+        if (value == null)
+            return null;
+        try {
+            byte[] compressed = Base64.getDecoder().decode(value);
+            try (InputStream iss = new ByteArrayInputStream(compressed);
+                    InputStream is = new GZIPInputStream(iss)) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] buffer = new byte[8192];
+                long total = 0;
+                int read;
+                while ((read = is.read(buffer)) != -1) {
+                    total += read;
+                    if (total > MAX_UNCOMPRESSED_PARAM_BYTES) {
+                        log.error("getCompressedDataParam: uncompressed size for key [" + key
+                                + "] exceeds cap of " + MAX_UNCOMPRESSED_PARAM_BYTES + " bytes, discarding");
+                        return null;
+                    }
+                    out.write(buffer, 0, read);
+                }
+                return out.toByteArray();
+            }
+        } catch (IOException e) {
+            log.error("getCompressedDataParam", e);
             return null;
         }
     }

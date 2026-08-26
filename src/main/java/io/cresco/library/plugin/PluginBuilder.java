@@ -26,7 +26,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.Attributes;
 import java.util.jar.JarInputStream;
@@ -64,7 +66,15 @@ public class PluginBuilder {
 
     public PluginBuilder(AgentService agentService, String className, BundleContext context, Map<String,Object> configMap) {
 
-        this.msgInProcessQueue = Executors.newCachedThreadPool();
+        //bounded pool: a cached (unbounded) pool here means thread-per-message under broker
+        //churn, which exhausts threads/FDs on constrained edge hosts; CallerRuns pushes
+        //backpressure onto the delivery thread instead of dropping or growing without limit
+        int msgInMaxThreads = Math.max(4, Runtime.getRuntime().availableProcessors());
+        ThreadPoolExecutor msgInPool = new ThreadPoolExecutor(msgInMaxThreads, msgInMaxThreads,
+                60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(1024),
+                new ThreadPoolExecutor.CallerRunsPolicy());
+        msgInPool.allowCoreThreadTimeOut(true);
+        this.msgInProcessQueue = msgInPool;
 
         // Always retain the BundleContext. Both construction paths (injected AgentService and the
         // tracked-AgentService path below) need it — e.g. the controller registers HealthCheck OSGi
@@ -136,6 +146,17 @@ public class PluginBuilder {
                 agentServiceTracker.close();
                 agentServiceTracker = null;
             }
+        } catch (Exception ex) {
+            /* ignore */
+        }
+        try {
+            msgInProcessQueue.shutdown();
+            if (!msgInProcessQueue.awaitTermination(5, TimeUnit.SECONDS)) {
+                msgInProcessQueue.shutdownNow();
+            }
+        } catch (InterruptedException ie) {
+            msgInProcessQueue.shutdownNow();
+            Thread.currentThread().interrupt();
         } catch (Exception ex) {
             /* ignore */
         }
