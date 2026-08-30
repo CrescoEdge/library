@@ -20,7 +20,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -543,44 +542,20 @@ public class PluginBuilder {
     }
 
 
+    // Compatibility alias: the algorithm is now the FIPS-approved SHA-256 (CrescoCrypto), not MD5.
+    // New code should call CrescoCrypto.contentHashHex directly. The wire param key "md5" still
+    // carries this value (now SHA-256); a fabric-wide rename is tracked in the compliance POA&M.
+    @Deprecated
     public String getMD5(InputStream inputStream) {
         String hashString = null;
         try {
-
-            if(inputStream != null) {
-
-                MessageDigest digest = MessageDigest.getInstance("MD5");
-
-                //Create byte array to read data in chunks
-                byte[] byteArray = new byte[1024];
-                int bytesCount = 0;
-
-                //Read file data and update in message digest
-                while ((bytesCount = inputStream.read(byteArray)) != -1) {
-                    digest.update(byteArray, 0, bytesCount);
-                }
-                ;
-
-                //close the stream; We don't need it now.
+            if (inputStream != null) {
+                hashString = io.cresco.library.crypto.CrescoCrypto.contentHashHex(inputStream);
                 inputStream.close();
-
-                //Get the hash's bytes
-                byte[] bytes = digest.digest();
-
-                //This bytes[] has bytes in decimal format;
-                //Convert it to hexadecimal format
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < bytes.length; i++) {
-                    sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
-                }
-
-                hashString = sb.toString();
             }
-
         } catch (Exception ex) {
             log.error("getMD5", ex);
         }
-        //return complete hash
         return hashString;
     }
 
