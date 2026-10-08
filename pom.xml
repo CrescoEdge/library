@@ -67,7 +67,7 @@
         <scope>provided</scope>
     </dependency>
 
-    <!-- unit tests (version + test scope managed by cresco-parent) -->
+    <!-- unit tests (version + test scope managed by cresco-parent; kept out of Embed-Dependency) -->
     <dependency>
         <groupId>org.junit.jupiter</groupId>
         <artifactId>junit-jupiter</artifactId>
@@ -562,7 +562,7 @@
                          which then fails ("multiple types"). So siddhi-core is excluded from the
                          embed scan here and instead inlined (below) from a log4j-stripped copy
                          produced by the antrun 'strip-log4j-from-siddhi-core' execution. -->
-                    <Embed-Dependency>!org.osgi.*;!slf4j-api;!siddhi-core;*</Embed-Dependency>
+                    <Embed-Dependency>!org.osgi.*;!slf4j-api;!siddhi-core;!junit-jupiter;*</Embed-Dependency>
                     <!-- inline (@ = explode) the log4j-stripped siddhi-core so io.siddhi.* +
                          its shaded guava/antlr/disruptor are exported per Export-Package. -->
                     <Include-Resource>@${project.build.directory}/siddhi-core-nolog4j.jar</Include-Resource>
