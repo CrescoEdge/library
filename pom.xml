@@ -67,6 +67,12 @@
         <scope>provided</scope>
     </dependency>
 
+    <!-- unit tests (version + test scope managed by cresco-parent) -->
+    <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+    </dependency>
+
     <!-- OSGi R8 core API (managed by cresco-parent) -->
     <dependency>
         <groupId>org.osgi</groupId>
