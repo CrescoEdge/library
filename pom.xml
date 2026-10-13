@@ -48,7 +48,7 @@
     <!-- jdk, encoding, compiler/bundle plugin versions inherited from cresco-parent -->
     <maven.javadoc.version>3.2.0</maven.javadoc.version>
     <maven.source.version>3.2.1</maven.source.version>
-    <micrometer.version>1.12.13</micrometer.version>
+    <micrometer.version>1.14.14</micrometer.version>
     <!-- Siddhi CEP: core engine + the four subprojects (query-api / query-compiler /
          annotations) come transitively with siddhi-core. Extensions are pinned below. -->
     <siddhi.version>5.1.33</siddhi.version>
@@ -427,7 +427,7 @@
     <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
-        <version>2.22.0</version>
+        <version>2.22.3</version>
         <exclusions>
             <exclusion>
                 <groupId>com.fasterxml.jackson.core</groupId>
@@ -443,7 +443,7 @@
     <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-core</artifactId>
-        <version>2.22.0</version>
+        <version>2.22.3</version>
     </dependency>
 
     <dependency>
