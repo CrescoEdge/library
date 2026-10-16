@@ -23,6 +23,10 @@ import java.security.SecureRandom;
  * <p>Pure JDK today (the SUN/SunJCE providers service these algorithms); when the validated provider
  * is installed and the JVM is in approved-only mode, the same {@code getInstance} calls route through
  * it. See {@code Compliance_Roadmap_800-53_CMMC.md} (Phase 0) and {@code POAM} line P0-BCFIPS.
+ *
+ * <p>Which algorithm types the fabric may choose for anything new is the fabric-wide {@link CryptoPolicy}, set at
+ * the global controller; the signature selector here ({@link #signatureAlgorithm}) goes through it. {@link #KDF_ALG}
+ * is not a choice but a format constant (a stored salt is re-derived with it), so the policy never refuses it.
  */
 public final class CrescoCrypto {
 
@@ -112,6 +116,20 @@ public final class CrescoCrypto {
         } finally {
             spec.clearPassword();
         }
+    }
+
+    // ---- Signature selection (fabric crypto policy) ----
+
+    /**
+     * The signature algorithm for a new signature or certificate made with a {@code keyAlgorithm} (RSA or EC) key:
+     * the preferred one the effective {@link CryptoPolicy} allows ({@code SHA384withRSA} under the default).
+     * Certificates are made at startup, before a node can hold the fabric policy, so this uses
+     * {@link CryptoPolicy#effective()}.
+     *
+     * @throws CryptoPolicy.Refused when the policy allows no signature algorithm for that key type
+     */
+    public static String signatureAlgorithm(String keyAlgorithm) {
+        return CryptoPolicy.effective().signatureFor(keyAlgorithm);
     }
 
     private static MessageDigest md(String alg) throws Exception {
