@@ -173,6 +173,13 @@ public class PluginBuilder {
     }
 
     public Config getConfig() { return config;}
+
+    /**
+     * The fabric-wide crypto policy this node holds (set at the global controller, carried down to every region
+     * and agent), or null when it has not arrived yet. A plugin that chooses an algorithm for something new checks
+     * it here, and refuses on null (fail closed); it never reads crypto policy keys from its own config.
+     */
+    public io.cresco.library.crypto.CryptoPolicy getCryptoPolicy() { return io.cresco.library.crypto.CryptoPolicy.current(); }
     public void setConfig(Map<String,Object> configMap) {
         this.config = new Config(configMap);
     }
