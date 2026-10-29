@@ -38,8 +38,18 @@ public final class TenantNamespace {
         return dest != null && dest.startsWith(MARKER + ".");
     }
 
-    /** The prefix {@code "T.<tenant>."} that all of a tenant's qualified destinations share. */
+    /**
+     * The prefix {@code "T.<tenant>."} that all of a tenant's qualified destinations share. A tenant name with a
+     * {@code .} (or anything else outside {@link CrescoIdentity#isValidTenant}) is refused: {@code T.t1.} would be a prefix
+     * of tenant {@code t1.x}'s namespace.
+     *
+     * @throws IllegalArgumentException for an invalid tenant name
+     */
     public static String prefix(String tenant) {
+        if (!CrescoIdentity.isValidTenant(tenant)) {
+            throw new IllegalArgumentException("not a valid tenant name for a namespace: '" + tenant + "' (1-64 of A-Z a-z 0-9 -,"
+                    + " no '.')");
+        }
         return MARKER + "." + tenant + ".";
     }
 
