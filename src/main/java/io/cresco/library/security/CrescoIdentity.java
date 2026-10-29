@@ -94,8 +94,65 @@ public final class CrescoIdentity {
         if (sb.length() > 0) {
             sb.append(", ");
         }
-        // Escape the RFC 2253 special characters so identities containing them stay well-formed.
-        sb.append(type).append('=').append(value.replaceAll("([,+\"\\\\<>;=])", "\\\\$1"));
+        sb.append(type).append('=').append(escape(value));
+    }
+
+    /**
+     * RFC 4514 attribute-value escaping: the specials {@code , + " \ < > ; =}, a leading {@code #} or space, a trailing
+     * space, and NUL. Without the leading/trailing rules a value like {@code " rc"} or {@code "#0c027263"} is read back by
+     * a DN parser as {@code "rc"} (trimmed, or decoded from hex DER) -- somebody else's name.
+     */
+    static String escape(String value) {
+        StringBuilder b = new StringBuilder(value.length() + 8);
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == ',' || c == '+' || c == '"' || c == '\\' || c == '<' || c == '>' || c == ';' || c == '='
+                    || (i == 0 && (c == '#' || c == ' ')) || (i == value.length() - 1 && c == ' ')) {
+                b.append('\\').append(c);
+            } else if (c == 0) {
+                b.append("\\00");
+            } else {
+                b.append(c);
+            }
+        }
+        return b.toString();
+    }
+
+    private static final java.util.regex.Pattern NAME = java.util.regex.Pattern.compile("[A-Za-z0-9](?:[A-Za-z0-9.-]{0,62}[A-Za-z0-9])?");
+
+    /**
+     * The Cresco identity name grammar (tenant, region, agent, uid): 1-64 of {@code A-Z a-z 0-9 . -}, starting and ending
+     * with a letter or digit. No whitespace, {@code #}, DN specials, control characters, or {@code _} (the separator in
+     * an agent path {@code <region>_<agent>}). The controller issues, pins and compares only such names.
+     */
+    public static boolean isValidName(String s) {
+        return s != null && NAME.matcher(s).matches();
+    }
+
+    /**
+     * The identity a certificate names, read strictly for security decisions: single-valued CN, OU and O exactly once
+     * each (UID at most once, nothing else), every value a valid name ({@link #isValidName}). Anything else is null.
+     */
+    public static CrescoIdentity fromCertificateStrict(X509Certificate cert) {
+        if (cert == null) return null;
+        try {
+            LdapName ln = new LdapName(cert.getSubjectX500Principal().getName());
+            String tenant = null, region = null, agent = null, uid = null;
+            for (Rdn rdn : ln.getRdns()) {
+                if (rdn.size() != 1 || !(rdn.getValue() instanceof String)) return null;
+                String type = rdn.getType(), value = (String) rdn.getValue();
+                if (!isValidName(value)) return null;
+                if ("CN".equalsIgnoreCase(type)) { if (agent != null) return null; agent = value; }
+                else if ("OU".equalsIgnoreCase(type)) { if (region != null) return null; region = value; }
+                else if ("O".equalsIgnoreCase(type)) { if (tenant != null) return null; tenant = value; }
+                else if ("UID".equalsIgnoreCase(type) || UID_OID.equals(type)) { if (uid != null) return null; uid = value; }
+                else return null;
+            }
+            if (agent == null || region == null || tenant == null) return null;
+            return new CrescoIdentity(tenant, region, agent, uid);
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     public String getTenant() { return tenant; }
