@@ -129,9 +129,21 @@ public final class CrescoIdentity {
         return s != null && NAME.matcher(s).matches();
     }
 
+    private static final java.util.regex.Pattern TENANT = java.util.regex.Pattern.compile("[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?");
+
+    /**
+     * The tenant name grammar: {@link #isValidName} without {@code .}. Tenant-namespaced destinations are
+     * {@code T.<tenant>.<name>} ({@link TenantNamespace}), so a tenant {@code t1} would otherwise be a string prefix of
+     * tenant {@code t1.x}'s namespace.
+     */
+    public static boolean isValidTenant(String s) {
+        return s != null && TENANT.matcher(s).matches();
+    }
+
     /**
      * The identity a certificate names, read strictly for security decisions: single-valued CN, OU and O exactly once
-     * each (UID at most once, nothing else), every value a valid name ({@link #isValidName}). Anything else is null.
+     * each (UID at most once, nothing else), every value a valid name ({@link #isValidName}; the tenant a valid tenant name,
+     * {@link #isValidTenant}). Anything else is null.
      */
     public static CrescoIdentity fromCertificateStrict(X509Certificate cert) {
         if (cert == null) return null;
@@ -144,7 +156,7 @@ public final class CrescoIdentity {
                 if (!isValidName(value)) return null;
                 if ("CN".equalsIgnoreCase(type)) { if (agent != null) return null; agent = value; }
                 else if ("OU".equalsIgnoreCase(type)) { if (region != null) return null; region = value; }
-                else if ("O".equalsIgnoreCase(type)) { if (tenant != null) return null; tenant = value; }
+                else if ("O".equalsIgnoreCase(type)) { if (tenant != null || !isValidTenant(value)) return null; tenant = value; }
                 else if ("UID".equalsIgnoreCase(type) || UID_OID.equals(type)) { if (uid != null) return null; uid = value; }
                 else return null;
             }
