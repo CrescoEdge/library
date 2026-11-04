@@ -50,12 +50,37 @@ public class RPC {
      * @return              The return message, null if no return is received
      */
     public MsgEvent call(MsgEvent msg, long timeout) {
+        return call(msg, timeout, null);
+    }
+
+    /**
+     * Issues a remote procedure call on behalf of an API user ({@link PluginBuilder#msgOutOnBehalfOf}).
+     * @param msg           Message to send
+     * @param caller        The API user, or null to send as this plugin
+     * @return              The return message, null if no return is received
+     */
+    public MsgEvent call(MsgEvent msg, io.cresco.library.security.Caller caller) {
+        return call(msg, DEFAULT_TIMEOUT_MS, caller);
+    }
+
+    /**
+     * Issues a remote procedure call, on behalf of an API user when {@code caller} is not null.
+     * @param msg           Message to send
+     * @param timeout       How long to wait for the response (in milliseconds)
+     * @param caller        The API user, or null to send as this plugin
+     * @return              The return message, null if no return is received
+     */
+    public MsgEvent call(MsgEvent msg, long timeout, io.cresco.library.security.Caller caller) {
         String callId = java.util.UUID.randomUUID().toString();
         CompletableFuture<MsgEvent> future = new CompletableFuture<>();
         pending.put(callId, future);
         try {
             msg.setParam("callId-" + plugin.getRegion() + "-" + plugin.getAgent() + "-" + plugin.getPluginID(), callId);
-            plugin.msgOut(msg);
+            if (caller != null) {
+                plugin.msgOutOnBehalfOf(msg, caller);
+            } else {
+                plugin.msgOut(msg);
+            }
             // Block until the reply completes the future (immediate wakeup) or the timeout elapses.
             return future.get(timeout, TimeUnit.MILLISECONDS);
         } catch (TimeoutException te) {

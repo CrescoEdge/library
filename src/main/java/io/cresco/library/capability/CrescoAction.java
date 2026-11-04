@@ -50,4 +50,16 @@ public @interface CrescoAction {
      * {@link CrescoCapabilities#routingParams()}. E.g. plugin actions need {region, agent, pluginid}.
      */
     String[] routingParams() default {};
+
+    /**
+     * The caller roles allowed to call this action: any of {@code infra}, {@code admin}, {@code plugin}, {@code user}
+     * ({@link io.cresco.library.security.Caller}). {@code PluginBuilder.msgIn} enforces it before the executor runs and
+     * answers a refused call with {@code status_code=403}.
+     *
+     * <p>Empty (the default) means the action is open to any caller of this agent's tenant and to {@code infra}; an
+     * {@code admin} of a superuser tenant also passes. A non-empty list replaces that rule for this action: the caller
+     * must hold one of the listed roles (and, unless it is {@code infra} or a superuser-tenant {@code admin}, be in this
+     * agent's tenant). See {@code controller/docs/caller-authorization.md}.
+     */
+    String[] roles() default {};
 }
