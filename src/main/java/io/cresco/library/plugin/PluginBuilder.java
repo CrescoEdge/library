@@ -4,6 +4,7 @@ import io.cresco.library.agent.AgentService;
 import io.cresco.library.messaging.MsgEvent;
 import io.cresco.library.messaging.RPC;
 import io.cresco.library.metrics.CrescoMeterRegistry;
+import io.cresco.library.security.ActionAuthorizer;
 import io.cresco.library.security.Caller;
 import io.cresco.library.security.JarSignatures;
 import io.cresco.library.utilities.CLogger;
@@ -60,6 +61,11 @@ public class PluginBuilder {
     private AtomicBoolean isActive = new AtomicBoolean(false);
     private RPC rpc;
     private ExecutorService msgInProcessQueue;
+    /** Who may run which action (verified caller, roles, privileged floor): checked before the executor runs. */
+    private final ActionAuthorizer authorizer;
+    private final java.util.concurrent.atomic.AtomicLong denied = new java.util.concurrent.atomic.AtomicLong();
+    private volatile long denyLogWindowStart;
+    private final java.util.concurrent.atomic.AtomicInteger denyLogsInWindow = new java.util.concurrent.atomic.AtomicInteger();
 
     public PluginBuilder(String className, BundleContext context, Map<String,Object> configMap) {
         this(null,className,context,configMap);
@@ -82,6 +88,13 @@ public class PluginBuilder {
         // services through it. Previously it was set only in the tracked path, so the controller's
         // getBundleContext() returned null and the health executor could not start.
         this.bundleContext = context;
+        String bundleName = null;
+        try {
+            if (context != null && context.getBundle() != null) bundleName = context.getBundle().getSymbolicName();
+        } catch (Exception ignore) {
+            // a test or mock context: the bundle may be named later (ActionAuthorizer.setBundle)
+        }
+        this.authorizer = new ActionAuthorizer(bundleName);
 
         String identString = null;
 
@@ -234,7 +247,12 @@ public class PluginBuilder {
                     this.getAgent() + "-" + this.getPluginID()));
             if (callId != null) {
                 //don't return rpc directly back to caller if self-called
-                int ttl = Integer.parseInt(message.getParam("ttl"));
+                int ttl;
+                try {
+                    ttl = Integer.parseInt(message.getParam("ttl"));
+                } catch (RuntimeException badTtl) {
+                    ttl = 0;                                    // no or malformed ttl: not a reply that travelled
+                }
                 if(ttl > 0) {
                     this.receiveRPC(callId, message);
                     return;
@@ -405,6 +423,90 @@ public class PluginBuilder {
 
     public void setExecutor(Executor executor) {
         this.executor = executor;
+        if (executor != null) authorizer.register(executor.getClass());
+    }
+
+    /** The authorization table of this bundle (its executors' {@code @CrescoAction} roles and the privileged floor). */
+    public ActionAuthorizer getAuthorizer() { return authorizer; }
+
+    /** Messages refused so far for want of an authorized caller. */
+    public long deniedCount() { return denied.get(); }
+
+    /**
+     * May the verified caller stamped on {@code msg} run its action here? The executor never runs a message this refuses.
+     * See {@link ActionAuthorizer}.
+     */
+    public ActionAuthorizer.Decision authorize(MsgEvent msg) {
+        return authorize(msg, authorizer);
+    }
+
+    /** {@link #authorize(MsgEvent)} against another table (the controller's regional and global tiers). */
+    public ActionAuthorizer.Decision authorize(MsgEvent msg, ActionAuthorizer table) {
+        AgentService as = agentService();
+        String tenant = null;
+        java.util.Set<String> superuser = java.util.Collections.emptySet();
+        if (as != null) {
+            try {
+                tenant = as.getTenant();
+                java.util.Set<String> s = as.getSuperuserTenants();
+                if (s != null) superuser = s;
+            } catch (Exception ignore) {
+                // unknown: fail closed (only what needs no tenant passes)
+            }
+        }
+        return table.decide(msg, tenant, superuser);
+    }
+
+    /**
+     * Authorize {@code msg} and, when it is refused: count it ({@code cresco.authz.denied}), log it (rate limited), and
+     * answer an RPC request with {@code status_code=403}, {@code status_desc=unauthorized: <action> needs <roles>}.
+     * Returns true when it may run.
+     */
+    public boolean admit(MsgEvent msg) {
+        return admit(msg, authorizer);
+    }
+
+    /** {@link #admit(MsgEvent)} against another table (the controller's regional and global tiers). */
+    public boolean admit(MsgEvent msg, ActionAuthorizer table) {
+        ActionAuthorizer.Decision d = authorize(msg, table);
+        if (d.allowed) return true;
+        denied.incrementAndGet();
+        String action = d.action == null ? "none" : d.action;
+        try {
+            if (crescoMeterRegistry != null) {
+                // the tag is bounded: an action this table does not know is counted as "other"
+                String tag = table.isKnown(action) ? action : "other";
+                crescoMeterRegistry.counter("cresco.authz.denied", "action", tag).increment();
+            }
+        } catch (Exception ignore) { }
+        long now = System.currentTimeMillis();
+        if (now - denyLogWindowStart > 10_000L) { denyLogWindowStart = now; denyLogsInWindow.set(0); }
+        if (denyLogsInWindow.incrementAndGet() <= 20) {
+            log.warn("DENIED {} {} from {} at {} ({}): {}", msg.getMsgType(), action, d.caller == null ? "no verified caller" : d.caller,
+                    getPluginID() == null ? "the controller" : getPluginID(), msg.printHeader(), d.statusDesc());
+        }
+        if (isRpcRequest(msg)) {
+            try {
+                msg.setParam("status_code", "403");
+                msg.setParam("status_desc", d.statusDesc());
+                msg.setReturn();
+                String callId = msg.getParam("callId-" + getRegion() + "-" + getAgent() + "-" + getPluginID());
+                if (callId != null) {
+                    rpc.putReturnMessage(callId, msg, true);
+                } else {
+                    msgOut(msg);
+                }
+            } catch (Exception ex) {
+                log.error("could not answer a refused call: {}", ex.getMessage());
+            }
+        }
+        return false;
+    }
+
+    /** An RPC request (not a reply): its caller's call id is keyed by its source, which a reply has swapped away. */
+    private static boolean isRpcRequest(MsgEvent m) {
+        if (m.getParams() == null || m.getParam("is_rpc") == null) return false;
+        return m.getParam("callId-" + m.getSrcRegion() + "-" + m.getSrcAgent() + "-" + m.getSrcPlugin()) != null;
     }
 
     public boolean isActive() { return this.isActive.get(); }
@@ -435,6 +537,11 @@ public class PluginBuilder {
                 if(msg.dstIsLocal(getRegion(),getAgent(),getPluginID())) {
 
                     MsgEvent retMsg = null;
+
+                    // deny by default: no executor runs a message whose verified caller may not run its action
+                    if (!admit(msg)) {
+                        return;
+                    }
 
                     if (executor != null) {
 

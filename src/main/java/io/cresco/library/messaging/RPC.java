@@ -143,30 +143,41 @@ public class RPC {
         call.future.complete(returnMessage);
     }
 
+    /** Params a controller sets on the error reply it generates for a call it could not route (see MsgRouter). */
+    static final String ROUTE_UNAVAILABLE = "route_unavailable", ROUTE_REFUSED = "route_refused";
+
     /**
      * Why a reply may not answer a call addressed to {@code region/agent/plugin}, or null when it may. The reply's verified
      * caller ({@link io.cresco.library.security.Caller}) must be the callee: for a call to a controller (no plugin), any
      * controller ({@code infra}; the controller tiers may route a controller function to the regional or global
      * controller); for a call to a plugin, that plugin, or the controller of its agent (which answers when the plugin is
-     * not there). {@code anonymous} (insecure development mode) passes.
+     * not there). The error reply a controller on the route generates when it cannot route the call ({@code route_unavailable},
+     * {@code route_refused}) may come from any controller: it only fails the call. {@code anonymous} (insecure development
+     * mode) passes.
      *
-     * <p>A reply that carries NO verified caller is accepted as before while the fabric does not stamp callers yet (the
-     * reply headers are written by the sender and change in transit -- {@code region_alias} normalization, controller
-     * tiers -- so they bind nothing); once callers are stamped, every reply carries one and an unstamped reply is refused.
+     * <p>A reply that carries NO verified caller is refused: the controller stamps every message it delivers (the sender,
+     * or {@code anonymous} when security is off), so an unstamped reply was not delivered by it.
      */
     public static String calleeRefusal(String region, String agent, String plugin, MsgEvent reply) {
         io.cresco.library.security.Caller who = io.cresco.library.security.Caller.fromMsgEvent(reply);
-        if (who == null) return io.cresco.library.security.Caller.hasAny(reply) ? "its caller stamp is malformed" : null;
+        if (who == null) {
+            return io.cresco.library.security.Caller.hasAny(reply) ? "its caller stamp is malformed" : "it carries no verified caller";
+        }
         if (who.isAnonymous()) return null;
-        if (plugin == null) {
-            return who.hasRole(io.cresco.library.security.Caller.ROLE_INFRA) ? null
-                    : "a call to the controller of " + region + "/" + agent + " was answered by " + who + ", not by a controller";
+        if (who.hasRole(io.cresco.library.security.Caller.ROLE_INFRA)
+                && (reply.getParam(ROUTE_UNAVAILABLE) != null || reply.getParam(ROUTE_REFUSED) != null)) {
+            return null;
         }
         boolean sameNode = region != null && region.equals(who.getRegion()) && agent != null && agent.equals(who.getAgent());
         io.cresco.library.security.Caller.Kind k = who.getKind();
-        if (sameNode && (k == io.cresco.library.security.Caller.Kind.CONTROLLER || k == io.cresco.library.security.Caller.Kind.AGENT)) return null;
+        // agent:<...> is a node admitted with minimal rights (an upgrade window): it still answers for itself
+        boolean ownNode = sameNode && (k == io.cresco.library.security.Caller.Kind.CONTROLLER || k == io.cresco.library.security.Caller.Kind.AGENT);
+        if (plugin == null) {
+            return who.hasRole(io.cresco.library.security.Caller.ROLE_INFRA) || ownNode ? null
+                    : "a call to the controller of " + region + "/" + agent + " was answered by " + who + ", not by a controller";
+        }
+        if (ownNode) return null;
         if (sameNode && k == io.cresco.library.security.Caller.Kind.PLUGIN && plugin.equals(who.getPluginId())) return null;
         return "a call to " + region + "/" + agent + "/" + plugin + " was answered by " + who;
     }
-
 }

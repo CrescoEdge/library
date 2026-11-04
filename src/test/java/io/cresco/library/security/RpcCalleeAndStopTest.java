@@ -96,7 +96,13 @@ class RpcCalleeAndStopTest {
         reply.setParam(Caller.PARAM_TENANT, "t9");
         assertNotNull(RPC.calleeRefusal("r", "a", null, reply), "a reply with a malformed stamp");
         Caller.strip(reply);
-        assertNull(RPC.calleeRefusal("r", "a", null, reply), "until callers are stamped, an unstamped reply is accepted as before");
+        assertNotNull(RPC.calleeRefusal("r", "a", null, reply), "the controller stamps every delivery: an unstamped reply is refused");
+        Caller.controller(T, "r9", "x").stamp(reply);
+        reply.setParam("route_unavailable", "REMOTE_REGION");
+        assertNull(RPC.calleeRefusal("r", "a", "p1", reply), "a router's error reply comes from whichever controller could not route");
+        Caller.plugin(T, "r9", "x", "p").stamp(reply);
+        assertNotNull(RPC.calleeRefusal("r", "a", "p1", reply), "only a controller generates a router error reply");
+        reply.removeParam("route_unavailable");
         Caller.anonymous().stamp(reply);
         assertNull(RPC.calleeRefusal("r", "a", null, reply));
     }
