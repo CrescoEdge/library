@@ -222,11 +222,8 @@
         </exclusions>
     </dependency>
 
-    <dependency>
-        <groupId>c3p0</groupId>
-        <artifactId>c3p0</artifactId>
-        <version>0.9.1.1</version>
-    </dependency>
+    <!-- c3p0 0.9.1.1 (unmaintained, known CVEs) removed: nothing uses it. Quartz loads it only for a pooled JDBC job
+         store, which Cresco never configures; it stays excluded above so it is not pulled back in transitively. -->
 
     <dependency>
         <groupId>net.minidev</groupId>

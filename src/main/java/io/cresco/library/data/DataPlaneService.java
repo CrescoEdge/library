@@ -14,7 +14,16 @@ public interface DataPlaneService {
     void updateConnections(String URI);
 
     //sending messages on DP
-    String addMessageListener(TopicType topicType, MessageListener messageListener, String selectorString);
+
+    /**
+     * Subscribe {@code messageListener} to a dataplane topic.
+     *
+     * @return the listener id, or null when the subscription could not be made now (a transient failure: no session, the
+     *         broker unreachable); the caller may retry
+     * @throws SubscriptionRefusedException the broker refused the subscription by policy (another tenant's topic, or a
+     *         recipient-bound stream for another identity); retrying it is refused again
+     */
+    String addMessageListener(TopicType topicType, MessageListener messageListener, String selectorString) throws SubscriptionRefusedException;
     void removeMessageListener(String listenerId);
     boolean sendMessage(TopicType topicType, Message message);
     boolean sendMessage(MsgEvent.Type msgEventType, TopicType topicType, Message message);
@@ -27,7 +36,9 @@ public interface DataPlaneService {
     // shard from a shared routing key (e.g. the stream ident). Default methods delegate to the
     // unsharded path so any implementation and any caller stays correct when sharding is off (N=1).
     default int getDataPlaneShardCount() { return 1; }
-    default String addMessageListener(TopicType topicType, MessageListener messageListener, String selectorString, int shard) {
+    /** As {@link #addMessageListener(TopicType, MessageListener, String)} on one shard. */
+    default String addMessageListener(TopicType topicType, MessageListener messageListener, String selectorString, int shard)
+            throws SubscriptionRefusedException {
         return addMessageListener(topicType, messageListener, selectorString);
     }
     default boolean sendMessage(TopicType topicType, Message message, int deliveryMode, int priority, int timeToLive, int shard) {

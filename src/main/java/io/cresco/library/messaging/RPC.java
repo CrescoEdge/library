@@ -30,8 +30,19 @@ public class RPC {
     private static final long DEFAULT_TIMEOUT_MS = 30000;
     /** Cresco logger */
     private CLogger logger;
-    /** Outstanding calls: callId -> future that its reply will complete. */
-    private final ConcurrentHashMap<String, CompletableFuture<MsgEvent>> pending = new ConcurrentHashMap<>();
+    /** One outstanding call: the future its reply completes, and the callee it was addressed to. */
+    private static final class Call {
+        final CompletableFuture<MsgEvent> future = new CompletableFuture<>();
+        final String region, agent, plugin;
+        Call(MsgEvent request) {
+            this.region = request.getDstRegion();
+            this.agent = request.getDstAgent();
+            this.plugin = request.getDstPlugin();
+        }
+    }
+
+    /** Outstanding calls: callId -> the call its reply completes. */
+    private final ConcurrentHashMap<String, Call> pending = new ConcurrentHashMap<>();
 
     private PluginBuilder plugin;
     /**
@@ -72,8 +83,9 @@ public class RPC {
      */
     public MsgEvent call(MsgEvent msg, long timeout, io.cresco.library.security.Caller caller) {
         String callId = java.util.UUID.randomUUID().toString();
-        CompletableFuture<MsgEvent> future = new CompletableFuture<>();
-        pending.put(callId, future);
+        Call pendingCall = new Call(msg);
+        CompletableFuture<MsgEvent> future = pendingCall.future;
+        pending.put(callId, pendingCall);
         try {
             msg.setParam("callId-" + plugin.getRegion() + "-" + plugin.getAgent() + "-" + plugin.getPluginID(), callId);
             if (caller != null) {
@@ -108,11 +120,53 @@ public class RPC {
      * @param returnMessage     The return message
      */
     public void putReturnMessage(String callId, MsgEvent returnMessage) {
-        CompletableFuture<MsgEvent> future = pending.get(callId);
-        if (future != null) {
-            future.complete(returnMessage);
+        putReturnMessage(callId, returnMessage, false);
+    }
+
+    /**
+     * As {@link #putReturnMessage(String, MsgEvent)}. {@code inProcess}: the reply was produced in this bundle by its own
+     * executor (a call to itself), so it is not checked against the callee; any other reply must come from the callee the
+     * call was addressed to ({@link #calleeRefusal}), or it is dropped and the call keeps waiting.
+     */
+    public void putReturnMessage(String callId, MsgEvent returnMessage, boolean inProcess) {
+        Call call = pending.get(callId);
+        if (call == null) {
+            return; // late/duplicate reply after timeout+removal — safe to drop.
         }
-        // else: late/duplicate reply after timeout+removal — safe to drop.
+        if (!inProcess) {
+            String why = calleeRefusal(call.region, call.agent, call.plugin, returnMessage);
+            if (why != null) {
+                logger.warn("RPC reply DROPPED: " + why);
+                return;
+            }
+        }
+        call.future.complete(returnMessage);
+    }
+
+    /**
+     * Why a reply may not answer a call addressed to {@code region/agent/plugin}, or null when it may. The reply's verified
+     * caller ({@link io.cresco.library.security.Caller}) must be the callee: for a call to a controller (no plugin), any
+     * controller ({@code infra}; the controller tiers may route a controller function to the regional or global
+     * controller); for a call to a plugin, that plugin, or the controller of its agent (which answers when the plugin is
+     * not there). {@code anonymous} (insecure development mode) passes.
+     *
+     * <p>A reply that carries NO verified caller is accepted as before while the fabric does not stamp callers yet (the
+     * reply headers are written by the sender and change in transit -- {@code region_alias} normalization, controller
+     * tiers -- so they bind nothing); once callers are stamped, every reply carries one and an unstamped reply is refused.
+     */
+    public static String calleeRefusal(String region, String agent, String plugin, MsgEvent reply) {
+        io.cresco.library.security.Caller who = io.cresco.library.security.Caller.fromMsgEvent(reply);
+        if (who == null) return io.cresco.library.security.Caller.hasAny(reply) ? "its caller stamp is malformed" : null;
+        if (who.isAnonymous()) return null;
+        if (plugin == null) {
+            return who.hasRole(io.cresco.library.security.Caller.ROLE_INFRA) ? null
+                    : "a call to the controller of " + region + "/" + agent + " was answered by " + who + ", not by a controller";
+        }
+        boolean sameNode = region != null && region.equals(who.getRegion()) && agent != null && agent.equals(who.getAgent());
+        io.cresco.library.security.Caller.Kind k = who.getKind();
+        if (sameNode && (k == io.cresco.library.security.Caller.Kind.CONTROLLER || k == io.cresco.library.security.Caller.Kind.AGENT)) return null;
+        if (sameNode && k == io.cresco.library.security.Caller.Kind.PLUGIN && plugin.equals(who.getPluginId())) return null;
+        return "a call to " + region + "/" + agent + "/" + plugin + " was answered by " + who;
     }
 
 }

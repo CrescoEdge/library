@@ -126,13 +126,24 @@ public class PluginBuilder {
      * Waits briefly if the tracked service is momentarily unavailable.
      */
     private AgentService agentService() {
-        if (agentServiceTracker != null) {
-            AgentService svc = agentServiceTracker.getService();
+        ServiceTracker<AgentService, AgentService> tracker = agentServiceTracker;
+        if (tracker != null) {
+            AgentService svc = tracker.getService();
             if (svc == null) {
+                // OUT-111: never wait while this bundle or the framework is stopping (the controller's AgentService is gone
+                // for good then): a 30 s wait per call there made every JVM stop end in SIGKILL. Otherwise wait in short
+                // slices, so a stop that begins during the wait ends it too.
+                long deadline = System.currentTimeMillis() + AGENT_SERVICE_WAIT_MS;
                 try {
-                    svc = agentServiceTracker.waitForService(AGENT_SERVICE_WAIT_MS);
+                    while (svc == null && !stopping()) {
+                        long left = deadline - System.currentTimeMillis();
+                        if (left <= 0) break;
+                        svc = tracker.waitForService(Math.min(left, AGENT_SERVICE_WAIT_SLICE_MS));
+                    }
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
+                } catch (IllegalStateException closedTracker) {
+                    return null;
                 }
             }
             return svc;
@@ -140,8 +151,35 @@ public class PluginBuilder {
         return agentService;
     }
 
+    private static final long AGENT_SERVICE_WAIT_SLICE_MS = 250L;
+    private volatile boolean closed;
+
+    /**
+     * Is this bundle, or the framework, stopping (or this builder closed)? Then the AgentService will not come back and
+     * nothing should wait for it.
+     */
+    boolean stopping() {
+        if (closed) return true;
+        BundleContext ctx = bundleContext;
+        if (ctx == null) return false;
+        try {
+            org.osgi.framework.Bundle self = ctx.getBundle();
+            if (self != null && (self.getState() & (org.osgi.framework.Bundle.STOPPING | org.osgi.framework.Bundle.RESOLVED
+                    | org.osgi.framework.Bundle.UNINSTALLED)) != 0) {
+                return true;
+            }
+            org.osgi.framework.Bundle system = ctx.getBundle(0);
+            return system != null && (system.getState() & org.osgi.framework.Bundle.STOPPING) != 0;
+        } catch (IllegalStateException invalidContext) {
+            return true;                                   // the bundle has stopped: its context is no longer valid
+        } catch (Exception other) {
+            return false;
+        }
+    }
+
     /** Close the AgentService tracker; call from the plugin's stop path to avoid leaking trackers across reloads. */
     public void close() {
+        closed = true;
         try {
             if (agentServiceTracker != null) {
                 agentServiceTracker.close();
@@ -436,7 +474,7 @@ public class PluginBuilder {
                                 getAgent() + "-" + getPluginID()));
 
                         if (callId != null) {
-                            receiveRPC(callId, retMsg);
+                            rpc.putReturnMessage(callId, retMsg, true);   // this executor answered its own bundle's call
                         } else {
                             msgOut(retMsg);
                         }
