@@ -39,9 +39,16 @@ public final class Caller {
     /** Reserved parameter: the caller's roles, a comma list. */
     public static final String PARAM_ROLES = "cresco_caller_roles";
 
+    /**
+     * Reserved parameter: the former region a node answers at ({@code region_alias}, GaiaKeep gfs#26), as its region's
+     * registry records it from the node's own verified registration. Set by infrastructure (the broker the node is attached
+     * to, or the node's own controller in-JVM), never by a sender: see {@link #regionAliasOf}.
+     */
+    public static final String PARAM_ALIAS = "cresco_caller_alias";
+
     /** Every reserved parameter name. A sender's value for any of them is never read. */
     public static final Set<String> RESERVED_PARAMS =
-            Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(PARAM_CALLER, PARAM_TENANT, PARAM_ROLES)));
+            Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(PARAM_CALLER, PARAM_TENANT, PARAM_ROLES, PARAM_ALIAS)));
 
     /** A Cresco controller (agent, region or global). */
     public static final String ROLE_INFRA = "infra";
@@ -172,7 +179,40 @@ public final class Caller {
         return parse(msg.getParam(PARAM_CALLER), msg.getParam(PARAM_TENANT), msg.getParam(PARAM_ROLES));
     }
 
-    /** Remove the three reserved parameters from {@code msg}. */
+    /**
+     * The former region the verified node of {@code msg}'s caller also answers at ({@link #PARAM_ALIAS}), or null: none,
+     * no node caller (controller, agent or plugin), or a value that is not a plain region name other than the node's own.
+     * Like the stamp itself it is infrastructure's: a sender's value is stripped on arrival.
+     */
+    public static String regionAliasOf(MsgEvent msg) {
+        if (msg == null || msg.getParams() == null) return null;
+        String alias = msg.getParam(PARAM_ALIAS);
+        Caller who = fromMsgEvent(msg);
+        if (alias == null || who == null) return null;
+        if (who.kind != Kind.CONTROLLER && who.kind != Kind.AGENT && who.kind != Kind.PLUGIN) return null;
+        return validAlias(alias, who.getRegion());
+    }
+
+    /** {@code alias} when it is a plain region name (no {@code _}, {@code .}, {@code /}) other than {@code region}, else null. */
+    public static String validAlias(String alias, String region) {
+        if (alias == null) return null;
+        alias = alias.trim();
+        if (alias.isEmpty() || alias.length() > 64 || alias.equals(region)) return null;
+        for (int i = 0; i < alias.length(); i++) {
+            char c = alias.charAt(i);
+            if (!(Character.isLetterOrDigit(c) || c == '-')) return null;
+        }
+        return alias;
+    }
+
+    /** Write the former region {@code alias} of this (node) caller onto {@code msg}; null or invalid removes it. */
+    public void stampRegionAlias(MsgEvent msg, String alias) {
+        String a = (kind == Kind.CONTROLLER || kind == Kind.AGENT || kind == Kind.PLUGIN) ? validAlias(alias, getRegion()) : null;
+        if (a == null) msg.removeParam(PARAM_ALIAS);
+        else msg.setParam(PARAM_ALIAS, a);
+    }
+
+    /** Remove the reserved parameters from {@code msg}. */
     public static void strip(MsgEvent msg) {
         if (msg == null || msg.getParams() == null) return;
         for (String p : RESERVED_PARAMS) msg.removeParam(p);
@@ -185,8 +225,9 @@ public final class Caller {
         return false;
     }
 
-    /** Write this caller onto {@code msg}, overwriting any reserved value already there. */
+    /** Write this caller onto {@code msg}, overwriting any reserved value already there (and removing any alias). */
     public void stamp(MsgEvent msg) {
+        msg.removeParam(PARAM_ALIAS);
         msg.setParam(PARAM_CALLER, principal);
         msg.setParam(PARAM_TENANT, tenant);
         msg.setParam(PARAM_ROLES, getRolesCsv());

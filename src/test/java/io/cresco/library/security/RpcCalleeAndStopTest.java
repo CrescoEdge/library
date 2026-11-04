@@ -99,9 +99,12 @@ class RpcCalleeAndStopTest {
         assertNotNull(RPC.calleeRefusal("r", "a", null, reply), "the controller stamps every delivery: an unstamped reply is refused");
         Caller.controller(T, "r9", "x").stamp(reply);
         reply.setParam("route_unavailable", "REMOTE_REGION");
-        assertNull(RPC.calleeRefusal("r", "a", "p1", reply), "a router's error reply comes from whichever controller could not route");
+        // hardening F9: a router's error reply comes from whichever controller could not route -- it only FAILS the call
+        assertNotNull(RPC.calleeRefusal("r", "a", "p1", reply), "a router's error reply is no answer");
+        assertNotNull(RPC.routeFailure(reply), "a router's error reply fails the call");
         Caller.plugin(T, "r9", "x", "p").stamp(reply);
         assertNotNull(RPC.calleeRefusal("r", "a", "p1", reply), "only a controller generates a router error reply");
+        assertNull(RPC.routeFailure(reply), "only a controller generates a router error reply");
         reply.removeParam("route_unavailable");
         Caller.anonymous().stamp(reply);
         assertNotNull(RPC.calleeRefusal("r", "a", null, reply), "anonymous binds nothing on a secured node");

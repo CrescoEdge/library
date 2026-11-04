@@ -3,6 +3,7 @@ package io.cresco.library.messaging;
 
 
 import io.cresco.library.plugin.PluginBuilder;
+import io.cresco.library.security.Caller;
 import io.cresco.library.utilities.CLogger;
 
 import java.util.concurrent.CompletableFuture;
@@ -136,11 +137,44 @@ public class RPC {
         if (!inProcess && securityEnabled()) {
             String why = calleeRefusal(call.region, call.agent, call.plugin, returnMessage);
             if (why != null) {
+                MsgEvent failure = routeFailure(returnMessage);
+                if (failure != null) {
+                    // a controller on the route could not deliver the call: that only FAILS it -- the caller gets the
+                    // marker and the error, never another parameter the reply carried
+                    logger.warn("RPC call to " + call.region + "/" + call.agent + (call.plugin == null ? "" : "/" + call.plugin)
+                            + " failed at " + Caller.fromMsgEvent(returnMessage) + ": " + failure.getParam("error"));
+                    call.future.complete(failure);
+                    return;
+                }
                 logger.warn("RPC reply DROPPED: " + why);
                 return;
             }
         }
         call.future.complete(returnMessage);
+    }
+
+    /**
+     * The failure a route-error reply ({@link #ROUTE_UNAVAILABLE}, {@link #ROUTE_REFUSED}) from a controller that is not the
+     * callee stands for: a new message with the reply's header, the marker, {@code error} and the controller's stamp --
+     * every other parameter it carried is dropped, so a relay that saw the call id can fail a call but never answer it.
+     * Null when {@code reply} is no such error (not from a controller, or no marker).
+     */
+    public static MsgEvent routeFailure(MsgEvent reply) {
+        if (reply == null || reply.getParams() == null) return null;
+        Caller who = Caller.fromMsgEvent(reply);
+        if (who == null || who.isAnonymous() || who.getKind() != Caller.Kind.CONTROLLER || !who.hasRole(Caller.ROLE_INFRA)) return null;
+        String marker = reply.getParam(ROUTE_UNAVAILABLE) != null ? ROUTE_UNAVAILABLE
+                : reply.getParam(ROUTE_REFUSED) != null ? ROUTE_REFUSED : null;
+        if (marker == null) return null;
+        MsgEvent f = new MsgEvent(reply.getMsgType(), reply.getSrcRegion(), reply.getSrcAgent(), reply.getSrcPlugin(),
+                reply.getDstRegion(), reply.getDstAgent(), reply.getDstPlugin(), false, false);
+        f.setParam(marker, reply.getParam(marker));
+        String error = reply.getParam("error");
+        f.setParam("error", error == null ? marker : error);
+        f.setParam("status_code", "503");
+        f.setParam("status_desc", marker + ": " + (error == null ? "" : error));
+        who.stamp(f);
+        return f;
     }
 
     /** Insecure development mode binds no reply to its callee (there are no verified callers). Unknown: bound. */
@@ -161,8 +195,11 @@ public class RPC {
      * caller ({@link io.cresco.library.security.Caller}) must be the callee: for a call to a controller (no plugin), any
      * controller ({@code infra}; the controller tiers may route a controller function to the regional or global
      * controller); for a call to a plugin, that plugin, or the controller of its agent (which answers when the plugin is
-     * not there). The error reply a controller on the route generates when it cannot route the call ({@code route_unavailable},
-     * {@code route_refused}) may come from any controller: it only fails the call. An {@code anonymous} stamp binds nothing:
+     * not there). A node that answers at its former address ({@code region_alias}) is that callee when the alias its stamp
+     * carries ({@link Caller#regionAliasOf}: set by infrastructure from the node's own verified registration) is the
+     * addressed region. The error reply a controller on the route generates when it cannot route the call
+     * ({@code route_unavailable}, {@code route_refused}) is refused here like any other reply that is not the callee's;
+     * {@link #routeFailure} turns it into a bare failure of the call. An {@code anonymous} stamp binds nothing:
      * it is refused here (in insecure development mode replies are not checked at all).
      *
      * <p>A reply that carries NO verified caller is refused: the controller stamps every message it delivers (the sender,
@@ -175,11 +212,12 @@ public class RPC {
         }
         // only consulted on a secured node (putReturnMessage): there an anonymous stamp binds nothing
         if (who.isAnonymous()) return "an anonymous reply on a secured node";
-        if (who.hasRole(io.cresco.library.security.Caller.ROLE_INFRA)
-                && (reply.getParam(ROUTE_UNAVAILABLE) != null || reply.getParam(ROUTE_REFUSED) != null)) {
-            return null;
-        }
-        boolean sameNode = region != null && region.equals(who.getRegion()) && agent != null && agent.equals(who.getAgent());
+        // a node moved to another region answers at its former address (region_alias, GaiaKeep gfs#26): its reply carries its
+        // current region in the stamp and the former one in the alias its region's registry recorded from the node's own
+        // verified registration (Caller.PARAM_ALIAS, set by infrastructure, never by the sender)
+        String alias = io.cresco.library.security.Caller.regionAliasOf(reply);
+        boolean sameNode = region != null && agent != null && agent.equals(who.getAgent())
+                && (region.equals(who.getRegion()) || region.equals(alias));
         io.cresco.library.security.Caller.Kind k = who.getKind();
         // agent:<...> is a node admitted with minimal rights (an upgrade window): it still answers for itself
         boolean ownNode = sameNode && (k == io.cresco.library.security.Caller.Kind.CONTROLLER || k == io.cresco.library.security.Caller.Kind.AGENT);
