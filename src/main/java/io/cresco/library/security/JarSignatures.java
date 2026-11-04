@@ -42,6 +42,11 @@ import java.util.zip.ZipInputStream;
  * An unsigned jar, a partially signed jar (any unsigned or tampered entry), and a jar signed by a foreign signer are
  * refused.
  *
+ * <p>A signature carrying a trusted RFC 3161 timestamp (the TSA's certificate has the time-stamping extended key usage
+ * and chains, valid at the stamped time, to the same trust store) is judged at the stamped time: a jar signed while its
+ * certificate was valid stays installable after that certificate expires. Without a timestamp (or with an untrusted one)
+ * the signer must be valid now -- re-sign before the signing certificate expires.
+ *
  * <p>The verified bytes are the file's bytes at the time of the call. Callers install from a private copy that nobody
  * else can write, so the file cannot change between this check and its use.
  */
@@ -171,9 +176,42 @@ public final class JarSignatures {
             }
             if (chain == null || chain.isEmpty()) continue;
             if (!permitsCodeSigning(chain.get(0))) continue;
-            if (CertTrust.verifyChain(chain, anchors)) return true;
+            // a trusted RFC 3161 timestamp vouches the signature was made at its time: the signer is judged then, so a
+            // jar stays installable after its signing certificate expires; without one, the signer is judged now
+            java.util.Date at = trustedTimestamp(s.getTimestamp(), anchors);
+            if (CertTrust.verifyChain(chain, anchors, at == null ? new java.util.Date() : at)) return true;
         }
         return false;
+    }
+
+    /** Extended key usage: time stamping (RFC 3161 TSA certificates). */
+    static final String EKU_TIME_STAMPING = "1.3.6.1.5.5.7.3.8";
+    /** How far in the future a timestamp may lie (clock skew between the TSA and this node). */
+    static final long MAX_TIMESTAMP_SKEW_MS = 5 * 60 * 1000L;
+
+    /**
+     * The time a signature's RFC 3161 timestamp vouches for, or null when it has none or the timestamp is not trusted. The
+     * JDK has checked the token's signature and that it covers this signature; here the TSA's certificate must carry the
+     * time-stamping extended key usage and chain, valid at the stamped time, to a certificate of the same trust store, and
+     * the time may not lie in the future.
+     */
+    static java.util.Date trustedTimestamp(java.security.Timestamp ts, List<X509Certificate> anchors) {
+        if (ts == null || ts.getTimestamp() == null || ts.getSignerCertPath() == null) return null;
+        java.util.Date at = ts.getTimestamp();
+        if (at.getTime() > System.currentTimeMillis() + MAX_TIMESTAMP_SKEW_MS) return null;
+        List<X509Certificate> tsa = new ArrayList<>();
+        for (Certificate c : ts.getSignerCertPath().getCertificates()) {
+            if (!(c instanceof X509Certificate)) return null;
+            tsa.add((X509Certificate) c);
+        }
+        if (tsa.isEmpty()) return null;
+        try {
+            List<String> eku = tsa.get(0).getExtendedKeyUsage();
+            if (eku == null || !eku.contains(EKU_TIME_STAMPING)) return null;
+        } catch (java.security.cert.CertificateParsingException cpe) {
+            return null;
+        }
+        return CertTrust.verifyChain(tsa, anchors, at) ? at : null;
     }
 
     private static boolean permitsCodeSigning(X509Certificate leaf) {
