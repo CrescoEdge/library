@@ -46,7 +46,7 @@ public class AgentState implements Serializable {
     public void msgIn(MsgEvent msg) {
         //    logger.trace("msgIn : " + msg.getParams().toString());
         //    msgInProcessQueue.submit(new MsgRoute(this, msg));
-        log.debug("MESSAGE IN AGENT!!! {}", msg.getParams().toString());
+        log.debug("MESSAGE IN AGENT: {} (params {})", msg.getMsgType(), msg.getParams() == null ? "none" : new java.util.TreeSet<>(msg.getParams().keySet()));
 
     }
 

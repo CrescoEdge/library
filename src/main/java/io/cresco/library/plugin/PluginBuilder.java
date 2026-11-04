@@ -570,7 +570,9 @@ public class PluginBuilder {
                                 break;
 
                             default:
-                                logger.error("UNKNOWN MESSAGE TYPE! " + msg.getParams());
+                                // names only, never parameter values (they may carry credentials or other callers' data)
+                                logger.error("UNKNOWN MESSAGE TYPE " + msg.getMsgType() + " (params " + (msg.getParams() == null ? "none"
+                                        : new java.util.TreeSet<>(msg.getParams().keySet())) + ")");
                                 break;
                         }
 
