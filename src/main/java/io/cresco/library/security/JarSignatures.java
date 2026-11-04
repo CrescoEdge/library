@@ -142,6 +142,22 @@ public final class JarSignatures {
      */
     public static KeyStore loadTrustStore(Path path, char[] password) throws IOException, GeneralSecurityException {
         if (path == null || !Files.isRegularFile(path)) throw new IOException("no trust store at " + path);
+        // a PEM bundle of trusted certificates needs no password (security_profile=production allows none)
+        byte[] head = new byte[64];
+        int n;
+        try (InputStream in = Files.newInputStream(path)) { n = in.readNBytes(head, 0, head.length); }
+        if (new String(head, 0, Math.max(0, n), java.nio.charset.StandardCharsets.US_ASCII).trim().startsWith("-----BEGIN")) {
+            KeyStore ks = KeyStore.getInstance("PKCS12");
+            ks.load(null, null);
+            int i = 0;
+            try (InputStream in = Files.newInputStream(path)) {
+                for (java.security.cert.Certificate c : java.security.cert.CertificateFactory.getInstance("X.509").generateCertificates(in)) {
+                    ks.setCertificateEntry("anchor-" + (i++), c);
+                }
+            }
+            if (i == 0) throw new IOException("no certificate in the PEM trust store " + path);
+            return ks;
+        }
         IOException last = null;
         for (String type : new String[]{"PKCS12", "JKS"}) {
             try (InputStream in = Files.newInputStream(path)) {

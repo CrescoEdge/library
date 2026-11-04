@@ -163,6 +163,21 @@ class JarSignaturesTest {
         assertTrue(sha.matches("[0-9a-f]{96}"));
     }
 
+    /** A PEM bundle of trust anchors loads with no password (security_profile=production allows none). */
+    @Test
+    void aPemTrustBundleNeedsNoPassword() throws Exception {
+        java.security.cert.Certificate ca = trust.getCertificate("ca");
+        Path pem = dir.resolve("anchors.pem");
+        Files.writeString(pem, "-----BEGIN CERTIFICATE-----\n"
+                + java.util.Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(ca.getEncoded()) + "\n-----END CERTIFICATE-----\n");
+        KeyStore fromPem = JarSignatures.loadTrustStore(pem, null);
+        Path signed = sign(plainJar("pem.jar", "io/x/A.class"), "leaf", "pem-signed.jar");
+        assertNotNull(JarSignatures.verify(signed, fromPem));
+        Path empty = dir.resolve("empty.pem");
+        Files.writeString(empty, "-----BEGIN NOTHING-----\n");
+        assertThrows(Exception.class, () -> JarSignatures.loadTrustStore(empty, null));
+    }
+
     @Test
     void aSignerPinnedDirectlyInTheTrustStoreIsAccepted() throws Exception {
         Path signed = sign(plainJar("p.jar", "io/x/A.class"), "leaf", "p-signed.jar");
