@@ -32,6 +32,14 @@ public final class CertTrust {
      * {@code trustedCAs}. Returns {@code true} iff a valid, in-date path exists to a trusted region CA.
      */
     public static boolean verifyChain(List<X509Certificate> chain, Collection<X509Certificate> trustedCAs) {
+        return verifyChain(chain, trustedCAs, null);
+    }
+
+    /**
+     * {@link #verifyChain(List, Collection)} with every certificate judged valid at {@code at} (null: now) -- the time a
+     * trusted timestamp vouches a signature was made.
+     */
+    public static boolean verifyChain(List<X509Certificate> chain, Collection<X509Certificate> trustedCAs, java.util.Date at) {
         if (chain == null || chain.isEmpty() || trustedCAs == null || trustedCAs.isEmpty()) {
             return false;
         }
@@ -65,6 +73,11 @@ public final class CertTrust {
             }
             if (path.isEmpty()) {
                 // The leaf itself is a trusted anchor.
+                try {
+                    chain.get(0).checkValidity(at == null ? new java.util.Date() : at);
+                } catch (Exception outOfDate) {
+                    return at == null;                       // as before when no time is given; judged when one is
+                }
                 return true;
             }
 
@@ -72,6 +85,7 @@ public final class CertTrust {
             CertPath certPath = cf.generateCertPath(path);
             PKIXParameters params = new PKIXParameters(anchors);
             params.setRevocationEnabled(false);
+            if (at != null) params.setDate(at);
             CertPathValidator validator = CertPathValidator.getInstance("PKIX");
             validator.validate(certPath, params);
             return true;
