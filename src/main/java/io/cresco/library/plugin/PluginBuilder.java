@@ -4,6 +4,8 @@ import io.cresco.library.agent.AgentService;
 import io.cresco.library.messaging.MsgEvent;
 import io.cresco.library.messaging.RPC;
 import io.cresco.library.metrics.CrescoMeterRegistry;
+import io.cresco.library.security.Caller;
+import io.cresco.library.security.JarSignatures;
 import io.cresco.library.utilities.CLogger;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
@@ -217,6 +219,63 @@ public class PluginBuilder {
 
         agentService().msgOut(getPluginID(), msg);
 
+    }
+
+    /**
+     * Send {@code msg} on behalf of an API user this plugin has authenticated. The controller stamps {@code caller} as
+     * the message's verified caller, but only for a bundle listed in {@code on_behalf_bundles} (default
+     * {@code io.cresco.wsapi}); for any other bundle it refuses and nothing is sent. {@code caller} must be an API caller
+     * ({@link Caller#api}).
+     *
+     * @throws SecurityException this bundle may not act on behalf of a user, or {@code caller} is not an API caller
+     */
+    public void msgOutOnBehalfOf(MsgEvent msg, Caller caller) {
+        if (caller == null || caller.getKind() != Caller.Kind.API) {
+            throw new SecurityException("msgOutOnBehalfOf needs an API caller, not " + caller);
+        }
+        AgentService as = agentService();
+        if (as == null) {
+            throw new IllegalStateException("AgentService is not available");
+        }
+        as.msgOutOnBehalfOf(getPluginID(), msg, caller);
+    }
+
+    /** {@link #sendRPC(MsgEvent)} on behalf of an API user; see {@link #msgOutOnBehalfOf}. */
+    public MsgEvent sendRPCOnBehalfOf(MsgEvent msg, Caller caller) {
+        msg.setParam("is_rpc",Boolean.TRUE.toString());
+        return this.rpc.call(msg, caller);
+    }
+
+    /** {@link #sendRPC(MsgEvent, long)} on behalf of an API user; see {@link #msgOutOnBehalfOf}. */
+    public MsgEvent sendRPCOnBehalfOf(MsgEvent msg, long timeout, Caller caller) {
+        msg.setParam("is_rpc",Boolean.TRUE.toString());
+        return this.rpc.call(msg, timeout, caller);
+    }
+
+    /**
+     * Verify a jar that arrived over the network before it is installed or stored: it must be signed, every entry, by a
+     * signer chaining to {@code plugin_signing_truststore} ({@link JarSignatures#verify}). Returns the jar's SHA-384
+     * (lowercase hex), computed here; a hash a caller supplied is advisory only.
+     *
+     * <p>Only when {@code plugin_signing_required=false} is set explicitly (development) is an unsigned or untrusted jar
+     * accepted, with a WARNING; its SHA-384 is still returned.
+     *
+     * @throws JarSignatures.Rejected the jar is not acceptable (including: no trust store configured)
+     */
+    public String verifyJarSignature(Path jar) throws java.io.IOException, java.security.GeneralSecurityException {
+        AgentService as = agentService();
+        if (as == null) {
+            throw new JarSignatures.Rejected("AgentService is not available, so the signing policy is unknown");
+        }
+        try {
+            return JarSignatures.verify(jar, as.getPluginSigningTrust());
+        } catch (JarSignatures.Rejected rejected) {
+            if (as.isPluginSigningRequired()) {
+                throw rejected;
+            }
+            log.warn("plugin_signing_required=false: accepting {} although {}", jar, rejected.getMessage());
+            return JarSignatures.sha384Hex(jar);
+        }
     }
     public CrescoMeterRegistry getCrescoMeterRegistry() { return crescoMeterRegistry; }
 
