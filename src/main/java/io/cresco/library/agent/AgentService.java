@@ -51,4 +51,13 @@ public interface AgentService {
 	 * every boot).
 	 */
 	default boolean isPluginSigningRequired() { return true; }
+
+	/**
+	 * The node's security profile ({@code security_profile}: production or standard; INSECURE only in explicit insecure
+	 * debug mode). A plugin enforces its own side of it -- in production, e.g., no password logins. An older controller
+	 * that does not know profiles answers {@link io.cresco.library.security.SecurityProfile#STANDARD}.
+	 */
+	default io.cresco.library.security.SecurityProfile getSecurityProfile() {
+		return isSecurityEnabled() ? io.cresco.library.security.SecurityProfile.STANDARD : io.cresco.library.security.SecurityProfile.INSECURE;
+	}
 }
