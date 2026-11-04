@@ -104,7 +104,7 @@ class RpcCalleeAndStopTest {
         assertNotNull(RPC.calleeRefusal("r", "a", "p1", reply), "only a controller generates a router error reply");
         reply.removeParam("route_unavailable");
         Caller.anonymous().stamp(reply);
-        assertNull(RPC.calleeRefusal("r", "a", null, reply));
+        assertNotNull(RPC.calleeRefusal("r", "a", null, reply), "anonymous binds nothing on a secured node");
     }
 
     @Test

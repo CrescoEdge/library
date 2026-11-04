@@ -53,13 +53,15 @@ public @interface CrescoAction {
 
     /**
      * The caller roles allowed to call this action: any of {@code infra}, {@code admin}, {@code plugin}, {@code user}
-     * ({@link io.cresco.library.security.Caller}). {@code PluginBuilder.msgIn} enforces it before the executor runs and
-     * answers a refused call with {@code status_code=403}.
+     * ({@link io.cresco.library.security.Caller}). {@code PluginBuilder.msgIn} checks it
+     * ({@link io.cresco.library.security.ActionAuthorizer}) before the executor runs and answers a refused call with
+     * {@code status_code=403}; with {@code broker_security_enabled=false} (insecure development mode) nothing is checked.
      *
-     * <p>Empty (the default) means the action is open to any caller of this agent's tenant and to {@code infra}; an
-     * {@code admin} of a superuser tenant also passes. A non-empty list replaces that rule for this action: the caller
-     * must hold one of the listed roles (and, unless it is {@code infra} or a superuser-tenant {@code admin}, be in this
-     * agent's tenant). See {@code controller/docs/caller-authorization.md}.
+     * <p>Empty (the default) means the action is open: to any caller of this agent's own tenant, and to {@code infra} or
+     * {@code admin} of a superuser tenant. A non-empty list: the caller must hold one of the listed roles, in this agent's
+     * tenant -- or, for {@code infra} and {@code admin} only, in a superuser tenant. The privileged floor
+     * ({@link io.cresco.library.security.ActionAuthorizer#PRIVILEGED}) applies whatever this says. See
+     * {@code controller/docs/caller-authorization.md} section 3.
      */
     String[] roles() default {};
 }

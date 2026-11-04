@@ -90,7 +90,8 @@ class CallerAuthorizationTest {
         assertTrue(ok(a, MsgEvent.Type.CONFIG, "dangerous", SU_ADMIN), "a superuser-tenant admin");
         assertTrue(ok(a, MsgEvent.Type.CONFIG, "dangerous", SU_INFRA), "a superuser-tenant controller");
         assertFalse(ok(a, MsgEvent.Type.CONFIG, "dangerous", SU_USER), "a superuser-tenant user is still only a user");
-        assertTrue(ok(a, MsgEvent.Type.CONFIG, "dangerous", Caller.anonymous()), "insecure development mode");
+        assertFalse(ok(a, MsgEvent.Type.CONFIG, "dangerous", Caller.anonymous()), "an anonymous stamp on a secured node");
+        assertTrue(ActionAuthorizer.insecure(msg(MsgEvent.Type.CONFIG, "dangerous", null)).allowed, "insecure development mode");
     }
 
     @Test
@@ -159,6 +160,15 @@ class CallerAuthorizationTest {
         assertTrue(ok(a, MsgEvent.Type.EXEC, "ping", OTHER_INFRA), "fabric mechanics admit every tenant's controllers");
         assertFalse(ok(a, MsgEvent.Type.EXEC, "ping", OTHER_ADMIN), "but not another tenant's admin");
         assertFalse(ok(a, MsgEvent.Type.EXEC, "ping", OTHER_PLUGIN));
+        a.open("INFO", "*");
+        assertTrue(ok(a, MsgEvent.Type.INFO, "anything", USER), "a type-wide open declaration");
+        assertTrue(ok(a, MsgEvent.Type.INFO, null, USER));
+        a.open("CONFIG", "killjvm");
+        a.setBundle(ActionAuthorizer.CONTROLLER_BUNDLE);
+        assertFalse(ok(a, MsgEvent.Type.CONFIG, "killjvm", USER), "declaring a floor action open never opens it");
+        a.require("EXEC", "strict", "infra");
+        a.open("EXEC", "strict");
+        assertFalse(ok(a, MsgEvent.Type.EXEC, "strict", ADMIN), "an open declaration never weakens declared roles");
         a.require("WATCHDOG", null, "infra");
         assertTrue(ok(a, MsgEvent.Type.WATCHDOG, null, INFRA));
         assertFalse(ok(a, MsgEvent.Type.WATCHDOG, null, PLUGIN), "a type-level requirement for messages without an action");
