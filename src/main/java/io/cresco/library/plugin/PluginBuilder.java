@@ -447,6 +447,7 @@ public class PluginBuilder {
         java.util.Set<String> superuser = java.util.Collections.emptySet();
         if (as != null) {
             try {
+                if (!as.isSecurityEnabled()) return ActionAuthorizer.insecure(msg);
                 tenant = as.getTenant();
                 java.util.Set<String> s = as.getSuperuserTenants();
                 if (s != null) superuser = s;

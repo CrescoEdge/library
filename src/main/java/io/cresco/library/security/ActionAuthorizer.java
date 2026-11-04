@@ -23,7 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * tenants {@code S} ({@code broker_superuser_tenants}). Rules, deny by default:
  * <ul>
  *   <li>No verified caller (or a malformed stamp): refused, whatever the action.</li>
- *   <li>{@code anonymous} (only when {@code broker_security_enabled=false} is set explicitly): allowed.</li>
+ *   <li>{@code anonymous}: refused here. Only when {@code broker_security_enabled=false} is set explicitly is every caller
+ *       admitted, before any table is consulted ({@link #insecure}).</li>
  *   <li>An OPEN action (no required roles): allowed when {@code C == D}; or the caller holds {@code infra} or
  *       {@code admin} and {@code C} is in {@code S}; or the caller holds {@code infra} and the action admits
  *       infrastructure of every tenant ({@link #allowAnyTenantInfra}, fabric mechanics on the controller tiers only).</li>
@@ -136,6 +137,15 @@ public final class ActionAuthorizer {
         declared.merge(key(type, action), roleSet(action, roles), ActionAuthorizer::intersect);
     }
 
+    /**
+     * Declare {@code type}/{@code action} OPEN (see the class rules), overriding the default for undeclared actions.
+     * {@code action} {@code "*"} declares every action of {@code type} that is not declared itself; null, a message of
+     * that type without an action. An open declaration never weakens roles declared for the same key.
+     */
+    public void open(String type, String action) {
+        declared.merge(key(type, action), Collections.emptySet(), ActionAuthorizer::intersect);
+    }
+
     /** The roles an action nobody declared requires (fail closed on the controller); empty means open. */
     public void setDefaultRoles(String... roles) {
         this.defaultRoles = roles == null || roles.length == 0 ? Collections.emptySet() : roleSet("(default)", roles);
@@ -159,7 +169,10 @@ public final class ActionAuthorizer {
         return Collections.unmodifiableSet(want);
     }
 
+    /** The stricter of two requirements; an empty (open) one adds nothing. */
     private static Set<String> intersect(Set<String> a, Set<String> b) {
+        if (a.isEmpty()) return b;
+        if (b.isEmpty()) return a;
         Set<String> i = new TreeSet<>(a);
         i.retainAll(b);
         if (i.isEmpty()) i.add(Caller.ROLE_INFRA);
@@ -179,15 +192,27 @@ public final class ActionAuthorizer {
         return false;
     }
 
+    /** Is {@code type}/{@code action} itself declared here (roles or open), not merely covered by a default? */
+    public boolean isDeclared(String type, String action) {
+        return declared.containsKey(key(type, action));
+    }
+
     /** The roles one of which a caller of {@code type}/{@code action} must hold; empty when the action is open. */
     public Set<String> requiredRoles(String type, String action) {
         Set<String> d = declared.get(key(type, action));
+        if (d == null) d = declared.get(key(type, "*"));
         if (d == null) d = defaultRoles.isEmpty() ? null : defaultRoles;
         Set<String> floor = (bundle == null || action == null) ? null : PRIVILEGED.get(bundle);
         if (floor != null && floor.contains(action)) {
-            return d == null ? PRIVILEGED_ROLES : intersect(d, PRIVILEGED_ROLES);
+            return d == null || d.isEmpty() ? PRIVILEGED_ROLES : intersect(d, PRIVILEGED_ROLES);
         }
         return d == null ? Collections.emptySet() : d;
+    }
+
+    /** The decision in insecure development mode ({@code broker_security_enabled=false}): every caller may. */
+    public static Decision insecure(MsgEvent msg) {
+        String action = msg == null ? null : msg.getParam("action");
+        return new Decision(true, "insecure development mode", action, Collections.emptySet(), Caller.anonymous());
     }
 
     /**
@@ -205,10 +230,11 @@ public final class ActionAuthorizer {
         if (c == null) {
             return new Decision(false, Caller.hasAny(msg) ? "malformed caller stamp" : "no verified caller", action, need, null);
         }
-        if (c.isAnonymous()) return new Decision(true, "insecure development mode", action, need, c);
+        // a secured node never admits an anonymous stamp (insecure development mode is decided before: insecure())
+        if (c.isAnonymous()) return new Decision(false, "an anonymous caller on a secured node", action, need, c);
         boolean sameTenant = localTenant != null && localTenant.equals(c.getTenant());
         boolean superTenant = superuserTenants != null && superuserTenants.contains(c.getTenant());
-        boolean infraAnyTenant = anyTenantInfra.contains(key(type, action));
+        boolean infraAnyTenant = anyTenantInfra.contains(key(type, action)) || anyTenantInfra.contains(key(type, "*"));
         if (need.isEmpty()) {
             if (sameTenant) return new Decision(true, null, action, need, c);
             if (superTenant && (c.hasRole(Caller.ROLE_INFRA) || c.hasRole(Caller.ROLE_ADMIN))) return new Decision(true, null, action, need, c);

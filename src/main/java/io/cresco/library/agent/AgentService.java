@@ -28,6 +28,12 @@ public interface AgentService {
 		throw new SecurityException("this controller does not accept messages on behalf of a user");
 	}
 
+	/**
+	 * False only when {@code broker_security_enabled=false} is set explicitly (insecure development mode): callers are then
+	 * not verified, every caller is {@code anonymous} with every role, and no action or reply is refused for its caller.
+	 */
+	default boolean isSecurityEnabled() { return true; }
+
 	/** This node's tenant, or null if it is not known yet (callers then fail closed). */
 	default String getTenant() { return null; }
 

@@ -133,7 +133,7 @@ public class RPC {
         if (call == null) {
             return; // late/duplicate reply after timeout+removal — safe to drop.
         }
-        if (!inProcess) {
+        if (!inProcess && securityEnabled()) {
             String why = calleeRefusal(call.region, call.agent, call.plugin, returnMessage);
             if (why != null) {
                 logger.warn("RPC reply DROPPED: " + why);
@@ -141,6 +141,16 @@ public class RPC {
             }
         }
         call.future.complete(returnMessage);
+    }
+
+    /** Insecure development mode binds no reply to its callee (there are no verified callers). Unknown: bound. */
+    private boolean securityEnabled() {
+        try {
+            io.cresco.library.agent.AgentService as = plugin.getAgentService();
+            return as == null || as.isSecurityEnabled();
+        } catch (RuntimeException e) {
+            return true;
+        }
     }
 
     /** Params a controller sets on the error reply it generates for a call it could not route (see MsgRouter). */
@@ -152,8 +162,8 @@ public class RPC {
      * controller ({@code infra}; the controller tiers may route a controller function to the regional or global
      * controller); for a call to a plugin, that plugin, or the controller of its agent (which answers when the plugin is
      * not there). The error reply a controller on the route generates when it cannot route the call ({@code route_unavailable},
-     * {@code route_refused}) may come from any controller: it only fails the call. {@code anonymous} (insecure development
-     * mode) passes.
+     * {@code route_refused}) may come from any controller: it only fails the call. An {@code anonymous} stamp binds nothing:
+     * it is refused here (in insecure development mode replies are not checked at all).
      *
      * <p>A reply that carries NO verified caller is refused: the controller stamps every message it delivers (the sender,
      * or {@code anonymous} when security is off), so an unstamped reply was not delivered by it.
@@ -163,7 +173,8 @@ public class RPC {
         if (who == null) {
             return io.cresco.library.security.Caller.hasAny(reply) ? "its caller stamp is malformed" : "it carries no verified caller";
         }
-        if (who.isAnonymous()) return null;
+        // only consulted on a secured node (putReturnMessage): there an anonymous stamp binds nothing
+        if (who.isAnonymous()) return "an anonymous reply on a secured node";
         if (who.hasRole(io.cresco.library.security.Caller.ROLE_INFRA)
                 && (reply.getParam(ROUTE_UNAVAILABLE) != null || reply.getParam(ROUTE_REFUSED) != null)) {
             return null;
