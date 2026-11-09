@@ -269,4 +269,84 @@ class JarSignaturesTest {
         assertTrue(ks.isCertificateEntry("ca"));
         assertTrue(((X509Certificate) ks.getCertificate("ca")).getBasicConstraints() >= 0);
     }
+
+    // ---------------------------------------------------------------- through the FIPS providers (security_profile=production)
+
+    /** The CMS verifier (JarSignatures.verifyCms) decides every case as the JDK's verifier does. */
+    @Test
+    void theProvidersOnlyVerifierAgreesWithTheJdkVerifier() throws Exception {
+        Path ok = sign(plainJar("k.jar", "io/x/A.class", "io/x/B.class", "META-INF/maven/x/pom.xml"), "leaf", "k-signed.jar");
+        assertEquals(JarSignatures.verify(ok, trust), JarSignatures.verifyCms(ok, trust), "the same jar, the same SHA-384");
+        assertNotNull(JarSignatures.verifyCms(ok, leafTrust), "a signer pinned directly");
+        Path plain = plainJar("k-u.jar", "io/x/A.class");
+        assertTrue(assertThrows(JarSignatures.Rejected.class, () -> JarSignatures.verifyCms(plain, trust)).getMessage().contains("not signed"));
+        Path partial = rewrite(ok, "k-partial.jar", "io/x/Evil.class", "evil".getBytes(StandardCharsets.UTF_8), true);
+        assertTrue(assertThrows(JarSignatures.Rejected.class, () -> JarSignatures.verifyCms(partial, trust)).getMessage().contains("io/x/Evil.class"));
+        Path tampered = rewrite(ok, "k-tampered.jar", "io/x/B.class", "changed".getBytes(StandardCharsets.UTF_8), false);
+        assertThrows(JarSignatures.Rejected.class, () -> JarSignatures.verifyCms(tampered, trust));
+        Path foreign = sign(plainJar("k-f.jar", "io/x/A.class"), "foreign", "k-foreign.jar");
+        assertThrows(JarSignatures.Rejected.class, () -> JarSignatures.verifyCms(foreign, trust));
+        Path tls = sign(plainJar("k-t.jar", "io/x/A.class"), "tlsonly", "k-tls.jar");
+        assertThrows(JarSignatures.Rejected.class, () -> JarSignatures.verifyCms(tls, trust));
+        KeyStore empty = KeyStore.getInstance("PKCS12");
+        empty.load(null, null);
+        assertThrows(JarSignatures.Rejected.class, () -> JarSignatures.verifyCms(ok, empty));
+        assertThrows(JarSignatures.Rejected.class, () -> JarSignatures.verifyCms(ok, null));
+        Path junk = dir.resolve("k-junk.jar");
+        Files.write(junk, "this is not a zip".getBytes(StandardCharsets.UTF_8));
+        assertThrows(Exception.class, () -> JarSignatures.verifyCms(junk, trust));
+    }
+
+    /** A manifest edited after signing: an added section signs nothing, and the main attributes may not change at all. */
+    @Test
+    void theProvidersOnlyVerifierHoldsTheManifestToItsSignature() throws Exception {
+        Path ok = sign(plainJar("m.jar", "io/x/A.class"), "leaf", "m-signed.jar");
+        byte[] mf;
+        try (JarFile jf = new JarFile(ok.toFile(), false)) {
+            try (InputStream in = jf.getInputStream(jf.getEntry("META-INF/MANIFEST.MF"))) { mf = in.readAllBytes(); }
+        }
+        String text = new String(mf, StandardCharsets.UTF_8);
+        // a section for a new entry appended (with its true digest): the signed sections still verify, the new one is unsigned
+        byte[] evil = "evil".getBytes(StandardCharsets.UTF_8);
+        String digest = java.util.Base64.getEncoder().encodeToString(java.security.MessageDigest.getInstance("SHA-384").digest(evil));
+        Path appended = rewrite(rewrite(ok, "m-a1.jar", "META-INF/MANIFEST.MF",
+                (text + "Name: io/x/Evil.class\r\nSHA-384-Digest: " + digest + "\r\n\r\n").getBytes(StandardCharsets.UTF_8), false),
+                "m-appended.jar", "io/x/Evil.class", evil, true);
+        JarSignatures.Rejected r = assertThrows(JarSignatures.Rejected.class, () -> JarSignatures.verifyCms(appended, trust));
+        assertTrue(r.getMessage().contains("io/x/Evil.class"), r.getMessage());
+        // the same manifest without the new entry: the signed entries alone are still accepted section by section
+        Path sectionOnly = rewrite(ok, "m-sections.jar", "META-INF/MANIFEST.MF",
+                (text + "Name: io/x/Other.class\r\nSHA-384-Digest: " + digest + "\r\n\r\n").getBytes(StandardCharsets.UTF_8), false);
+        assertNotNull(JarSignatures.verifyCms(sectionOnly, trust), "signed sections must verify one by one after another was added");
+        // a main attribute changed (here Bundle-SymbolicName): refused
+        Path renamed = rewrite(ok, "m-renamed.jar", "META-INF/MANIFEST.MF",
+                text.replace("test.bundle", "evil.bundle").getBytes(StandardCharsets.UTF_8), false);
+        assertThrows(JarSignatures.Rejected.class, () -> JarSignatures.verifyCms(renamed, trust));
+    }
+
+    @Test
+    void manifestSectionsKeepTheirExactBytes() throws Exception {
+        byte[] m = "Manifest-Version: 1.0\r\nX: a\r\n b\r\n\r\nName: io/x/A.class\r\nSHA-384-Digest: zz\r\n\r\n".getBytes(StandardCharsets.UTF_8);
+        JarSignaturesCms.Parsed p = JarSignaturesCms.parse(m);
+        assertEquals("ab", p.main.attrs.get("x"), "a continuation line");
+        assertEquals("Manifest-Version: 1.0\r\nX: a\r\n b\r\n\r\n", new String(p.main.raw, StandardCharsets.UTF_8));
+        assertEquals("Name: io/x/A.class\r\nSHA-384-Digest: zz\r\n\r\n", new String(p.named.get("io/x/A.class").raw, StandardCharsets.UTF_8));
+        assertThrows(JarSignatures.Rejected.class, () -> JarSignaturesCms.parse("A: 1\nA: 2\n".getBytes(StandardCharsets.UTF_8)));
+    }
+
+    /** With the FIPS module as the first provider, the providers-only verifier runs on it (digests and signatures). */
+    @Test
+    void theProvidersOnlyVerifierRunsOnTheFipsModule() throws Exception {
+        Path ok = sign(plainJar("fips.jar", "io/x/A.class", "io/x/B.class"), "leaf", "fips-signed.jar");
+        Path tampered = rewrite(ok, "fips-tampered.jar", "io/x/B.class", "changed".getBytes(StandardCharsets.UTF_8), false);
+        java.security.Provider fips = new org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider();
+        java.security.Security.insertProviderAt(fips, 1);
+        try {
+            assertEquals("BCFIPS", java.security.MessageDigest.getInstance("SHA-384").getProvider().getName());
+            assertEquals(JarSignatures.sha384Hex(ok), JarSignatures.verifyCms(ok, trust));
+            assertThrows(JarSignatures.Rejected.class, () -> JarSignatures.verifyCms(tampered, trust));
+        } finally {
+            java.security.Security.removeProvider(fips.getName());
+        }
+    }
 }
