@@ -233,6 +233,24 @@ public class PluginBuilder {
      * it here, and refuses on null (fail closed); it never reads crypto policy keys from its own config.
      */
     public io.cresco.library.crypto.CryptoPolicy getCryptoPolicy() { return io.cresco.library.crypto.CryptoPolicy.current(); }
+
+    /**
+     * This node's security profile ({@code security_profile}) as its controller enforces it. A plugin enforces its own side
+     * of the profile from here -- in production, e.g., no password logins -- and never reads {@code security_profile} from
+     * its own configuration (it could differ from the controller's). Read it where a decision is made, not once at start.
+     * Fails closed: when the controller cannot be asked, or answers nothing, {@link
+     * io.cresco.library.security.SecurityProfile#PRODUCTION} (the strictest).
+     */
+    public io.cresco.library.security.SecurityProfile getSecurityProfile() {
+        AgentService as = agentService();
+        if (as == null) return io.cresco.library.security.SecurityProfile.PRODUCTION;
+        try {
+            io.cresco.library.security.SecurityProfile p = as.getSecurityProfile();
+            return p == null ? io.cresco.library.security.SecurityProfile.PRODUCTION : p;
+        } catch (RuntimeException e) {
+            return io.cresco.library.security.SecurityProfile.PRODUCTION;
+        }
+    }
     public void setConfig(Map<String,Object> configMap) {
         this.config = new Config(configMap);
     }
