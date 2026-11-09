@@ -121,6 +121,45 @@ public final class JarSignatures {
         return sha384Hex(jar);
     }
 
+    /**
+     * As {@link #verify(Path, KeyStore)}, with every signature check made through the JCA providers this node installed
+     * instead of the JDK's internal jar verifier: the signature blocks parsed and verified as CMS with Bouncy Castle FIPS,
+     * every digest computed by the providers ({@link JarSignaturesCms}). Under {@code security_profile=production} those
+     * are the FIPS 140-3 modules in approved-only mode, so nothing outside the module boundary decides. A runtime without
+     * Bouncy Castle FIPS refuses every jar here (fail closed).
+     */
+    public static String verifyCms(Path jar, KeyStore trust) throws IOException, GeneralSecurityException {
+        if (jar == null) throw new Rejected("no jar");
+        if (trust == null) throw new Rejected("no plugin signing trust store is configured");
+        List<X509Certificate> anchors = trustedCertificates(trust);
+        if (anchors.isEmpty()) throw new Rejected("the plugin signing trust store holds no trusted certificate");
+        if (!Files.isRegularFile(jar, LinkOption.NOFOLLOW_LINKS)) throw new Rejected(jar + " is not a regular file");
+        Set<String> localNames = localHeaderNames(jar);
+        Set<String> centralNames = new HashSet<>();
+        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(jar.toFile())) {
+            Enumeration<? extends ZipEntry> en = zf.entries();
+            while (en.hasMoreElements()) {
+                String name = en.nextElement().getName();
+                if (!centralNames.add(name)) throw new Rejected("duplicate entry " + name);
+                if (centralNames.size() > MAX_ENTRIES) throw new Rejected("more than " + MAX_ENTRIES + " entries");
+            }
+        } catch (java.util.zip.ZipException ze) {
+            throw new Rejected("not a valid jar: " + ze.getMessage(), ze);
+        }
+        if (!centralNames.equals(localNames)) throw new Rejected("the jar's local entries differ from its central directory");
+        int signed;
+        try {
+            signed = JarSignaturesCms.verify(jar, anchors);
+        } catch (LinkageError noBc) {
+            throw new Rejected("jar signatures cannot be verified through the FIPS providers here (Bouncy Castle FIPS is not"
+                    + " available: " + noBc + ")");
+        } catch (java.util.zip.ZipException ze) {
+            throw new Rejected("not a valid jar: " + ze.getMessage(), ze);
+        }
+        if (signed == 0) throw new Rejected(jar.getFileName() + " has no signed content");
+        return sha384Hex(jar);
+    }
+
     /** SHA-384 of a file, lowercase hex. */
     public static String sha384Hex(Path file) throws IOException {
         try {
@@ -230,7 +269,7 @@ public final class JarSignatures {
         return CertTrust.verifyChain(tsa, anchors, at) ? at : null;
     }
 
-    private static boolean permitsCodeSigning(X509Certificate leaf) {
+    static boolean permitsCodeSigning(X509Certificate leaf) {
         boolean[] ku = leaf.getKeyUsage();
         if (ku != null && (ku.length == 0 || !ku[0])) return false; // digitalSignature
         try {

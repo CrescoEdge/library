@@ -342,7 +342,11 @@ public class PluginBuilder {
             throw new JarSignatures.Rejected("AgentService is not available, so the signing policy is unknown");
         }
         try {
-            return JarSignatures.verify(jar, as.getPluginSigningTrust());
+            // production: through the FIPS providers only (CMS + digests via the installed modules), never the JDK's
+            // internal jar verifier; otherwise the JDK's verifier, as before
+            return getSecurityProfile() == io.cresco.library.security.SecurityProfile.PRODUCTION
+                    ? JarSignatures.verifyCms(jar, as.getPluginSigningTrust())
+                    : JarSignatures.verify(jar, as.getPluginSigningTrust());
         } catch (JarSignatures.Rejected rejected) {
             if (as.isPluginSigningRequired()) {
                 throw rejected;

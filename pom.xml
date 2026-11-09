@@ -73,6 +73,30 @@
         <artifactId>junit-jupiter</artifactId>
     </dependency>
 
+    <!-- Bouncy Castle FIPS (BC-FJA, FIPS 140-3): the CMS/TSP API that verifies plugin jar signatures under
+         security_profile=production (JarSignatures.verifyCms), with whatever JCA providers the agent installed (the FIPS
+         modules in approved-only mode). provided: never embedded (a FIPS module checks its own jar); the agent puts the
+         unmodified jars on the JVM class path and the system bundle exports their packages (imported optionally here: a
+         runtime without them still resolves this bundle, and production refuses jars it cannot verify). -->
+    <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bc-fips</artifactId>
+        <version>2.1.3</version>
+        <scope>provided</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-fips</artifactId>
+        <version>2.1.13</version>
+        <scope>provided</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcutil-fips</artifactId>
+        <version>2.1.8</version>
+        <scope>provided</scope>
+    </dependency>
+
     <!-- OSGi R8 core API (managed by cresco-parent) -->
     <dependency>
         <groupId>org.osgi</groupId>
