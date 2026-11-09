@@ -45,8 +45,25 @@ public final class SecretParams {
 
     private SecretParams() {}
 
+    /**
+     * What {@link #isSecretParam} decided for each name: a pure function of the name, asked on every configuration read
+     * (several per message on the control plane), where the pattern match was a fifth of a controller's CPU per message.
+     * Names are the code's own parameter names, so few; past the bound the decision is simply not remembered.
+     */
+    private static final java.util.concurrent.ConcurrentHashMap<String, Boolean> DECIDED = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final int DECIDED_MAX = 4096;
+
     /** Is {@code param} a secret that Config resolves from a file or the environment first. */
     public static boolean isSecretParam(String param) {
+        if (param == null) return false;
+        Boolean known = DECIDED.get(param);
+        if (known != null) return known;
+        boolean secret = decide(param);
+        if (DECIDED.size() < DECIDED_MAX) DECIDED.put(param, secret);
+        return secret;
+    }
+
+    private static boolean decide(String param) {
         if (param == null || param.isEmpty() || param.toLowerCase(Locale.ROOT).endsWith(FILE_SUFFIX)) return false;
         for (String family : NOT_SOURCES) {
             if (param.equals(family) || param.startsWith(family + "_")) return false;

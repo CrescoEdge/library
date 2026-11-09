@@ -90,8 +90,10 @@ public class Config {
 
         if (env != null) {
 
-            synchronized (lockConfig) {
-                configMap.put(param,env);
+            if (!env.equals(configMap.get(param))) {          // read on every message: the lock only when it changes
+                synchronized (lockConfig) {
+                    configMap.put(param,env);
+                }
             }
 
             if (env.toLowerCase().trim().equals("true") || env.trim().equals("1")) {
@@ -280,8 +282,10 @@ public class Config {
         }
 
         if(env != null) {
-            synchronized (lockConfig) {
-                configMap.put(param,env);
+            if (!env.equals(configMap.get(param))) {          // read on every message: the lock only when it changes
+                synchronized (lockConfig) {
+                    configMap.put(param,env);
+                }
             }
             return env;
         }
