@@ -565,6 +565,10 @@ public class PluginBuilder {
                     if (!admit(msg)) {
                         return;
                     }
+                    // only a request is answered: a message that merely carries is_rpc (a reply nobody waits for, a
+                    // message a client marked so) answered here was run by its receiver as a request and answered again,
+                    // back and forth until its ttl ended
+                    final boolean rpcRequest = isRpcRequest(msg);
 
                     if (executor != null) {
 
@@ -599,7 +603,7 @@ public class PluginBuilder {
                         }
 
 
-                    if ((retMsg != null) && (retMsg.getParams().keySet().contains("is_rpc"))) {
+                    if ((retMsg != null) && rpcRequest) {
                         retMsg.setReturn();
                         //pick up self-rpc, unless ttl == 0
                         String callId = retMsg.getParam(("callId-" + getRegion() + "-" +
