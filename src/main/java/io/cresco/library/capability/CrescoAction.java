@@ -70,9 +70,10 @@ public @interface CrescoAction {
      * (management: only from the receiving node itself or a controller above it), {@code "up"} (a child reporting to its
      * parent: only from the node itself or a node below it) or {@code "any"} (from anywhere). Empty (the default) inherits:
      * {@code down} for an action of the privileged floor
-     * ({@link io.cresco.library.security.ActionAuthorizer#PRIVILEGED}), {@code any} for every other. Any other value fails
-     * the plugin's start. Role and tenant are checked first and are unchanged by it; a controller of an earlier release
-     * does not look at it. See {@code controller/docs/caller-authorization.md}, "Authority follows the tree".
+     * ({@link io.cresco.library.security.ActionAuthorizer#PRIVILEGED}), {@code any} for every other. An action of the
+     * privileged floor is {@code down} and stays so: declaring it {@code "any"} or {@code "up"} here fails the plugin's
+     * start, as any unknown value does. Role and tenant are checked first and are unchanged by it; a controller of an
+     * earlier release does not look at it. See {@code controller/docs/caller-authorization.md}, "Authority follows the tree".
      */
     String direction() default "";
 }
