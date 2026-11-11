@@ -89,6 +89,7 @@ public class RPC {
         pending.put(callId, pendingCall);
         try {
             msg.setParam("callId-" + plugin.getRegion() + "-" + plugin.getAgent() + "-" + plugin.getPluginID(), callId);
+            stateTimeout(msg, timeout);
             if (caller != null) {
                 plugin.msgOutOnBehalfOf(msg, caller);
             } else {
@@ -104,6 +105,20 @@ public class RPC {
         } finally {
             pending.remove(callId); // never leak the registration, reply or not
         }
+    }
+
+    /** The request parameter that says how long its caller waits for the answer, in milliseconds. */
+    public static final String TIMEOUT_PARAM = "rpc_timeout_ms";
+
+    /**
+     * A request says how long its caller waits ({@value #TIMEOUT_PARAM}): a controller then keeps it in a broker no
+     * longer than that (plus the allowance for clocks) instead of five minutes, and can answer at once when it has no
+     * route to the callee. A statement the request already carries is kept as it is: it may be a gateway client's, or
+     * part of what an application signed.
+     */
+    public static void stateTimeout(MsgEvent msg, long timeoutMs) {
+        if (msg == null || timeoutMs <= 0) return;
+        if (msg.getParam(TIMEOUT_PARAM) == null) msg.setParam(TIMEOUT_PARAM, Long.toString(timeoutMs));
     }
 
     /**
