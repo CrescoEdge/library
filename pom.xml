@@ -45,6 +45,7 @@
 
 
 <properties>
+    <cresco.commit>unknown</cresco.commit>
     <!-- jdk, encoding, compiler/bundle plugin versions inherited from cresco-parent -->
     <maven.javadoc.version>3.2.0</maven.javadoc.version>
     <maven.source.version>3.2.1</maven.source.version>
@@ -563,6 +564,8 @@
                     <Bundle-Description>Library for Cresco</Bundle-Description>
                     <Bundle-Vendor>Cresco.io</Bundle-Vendor>
                     <Bundle-Version>${project.version}-${maven.build.timestamp}</Bundle-Version>
+                    <!-- the source commit this bundle was built from (CI passes -Dcresco.commit; a build by hand says unknown) -->
+                    <Cresco-Commit>${cresco.commit}</Cresco-Commit>
                     <!--
                       This is the shared uber-bundle: it embeds and re-exports the common
                       runtime (Siddhi, Micrometer, JMS API, etc.) that plugins compile against.
