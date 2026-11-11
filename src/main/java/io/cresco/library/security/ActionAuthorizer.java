@@ -46,8 +46,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * the node that vouched for it -- and the receiving node's controller says where that speaker stands ({@link Position}).
  * A {@link Direction#DOWN} action (management) is honoured only from the node itself or a controller above it; an
  * {@link Direction#UP} action (a child reporting to its parent) only from the node itself or a node below it; an
- * {@link Direction#ANY} action from anywhere. Every action of the privileged floor is {@code DOWN} unless it is declared
- * otherwise ({@link #direct}, {@code @CrescoAction(direction=...)}); every other action is {@code ANY} unless declared.
+ * {@link Direction#ANY} action from anywhere. Every action of the privileged floor is {@code DOWN}; like its roles, that
+ * can only be narrowed, never widened: no declaration for a whole type and no plugin annotation makes a floor action
+ * {@code ANY} (or {@code UP}); only the controller's own table may say {@code UP} for one of its own, by name
+ * ({@link #direct}: the registrations a child sends its parent). Every other action is {@code ANY} unless declared ({@link #direct},
+ * {@code @CrescoAction(direction=...)}).
  * The role and tenant rules are checked first and are unchanged: direction only ever refuses more. {@link Mode} says what
  * a call from the wrong place meets: nothing ({@code OFF}), a count and a log line ({@code LOG}), or a refusal
  * ({@code ENFORCE}; a speaker the node cannot place, {@link Position#UNKNOWN}, is refused too).
@@ -105,6 +108,9 @@ public final class ActionAuthorizer {
         /** A call from the wrong place is refused. */
         ENFORCE;
 
+        /** The configuration key ({@code authority_direction}). */
+        public static final String KEY = "authority_direction";
+
         /** {@code off}, {@code log} or {@code enforce} (case-insensitive); {@code LOG} when not set; null for anything else. */
         public static Mode parse(String v) {
             if (v == null || v.trim().isEmpty()) return LOG;
@@ -138,13 +144,19 @@ public final class ActionAuthorizer {
         /** A call that {@link Mode#ENFORCE} would refuse was allowed ({@link Mode#LOG}): count it, log it. */
         default void wouldRefuse(MsgEvent msg, Decision decision) { }
 
+        /**
+         * A call was refused for where its speaker stands ({@link Mode#ENFORCE}; {@link Decision#directionRefused}), and
+         * answered 403 when it was a request: count it.
+         */
+        default void refused(MsgEvent msg, Decision decision) { }
+
         /** A controller that does not know directions (an earlier release): nothing is looked at. */
         Authority NONE = new Authority() {
             @Override public Mode mode() { return Mode.OFF; }
             @Override public Position positionOf(MsgEvent msg, Caller caller) { return Position.UNKNOWN; }
         };
 
-        /** No controller could be asked: every action with a direction is refused (fail closed). */
+        /** Nobody can say where a speaker stands, and the node enforces: every action with a direction is refused (fail closed). */
         Authority CLOSED = new Authority() {
             @Override public Mode mode() { return Mode.ENFORCE; }
             @Override public Position positionOf(MsgEvent msg, Caller caller) { return Position.UNKNOWN; }
@@ -251,6 +263,8 @@ public final class ActionAuthorizer {
     private volatile Set<String> defaultRoles = Collections.emptySet();
     /** {@code TYPE|action} ({@code TYPE|*}: every action of the type not declared itself) -> the direction declared for it. */
     private final Map<String, Direction> directions = new ConcurrentHashMap<>();
+    /** The keys of {@link #directions} that an annotation declared (a plugin's own word, which never moves a floor action). */
+    private final Set<String> annotatedDirections = ConcurrentHashMap.newKeySet();
 
     public ActionAuthorizer(String bundleSymbolicName) {
         this.bundle = bundleSymbolicName;
@@ -259,6 +273,11 @@ public final class ActionAuthorizer {
     /** The bundle whose privileged floor applies (set when the bundle context does not name it, e.g. in tests). */
     public void setBundle(String bundleSymbolicName) {
         this.bundle = bundleSymbolicName;
+        // what was declared before the floor was known is held to it now
+        for (Map.Entry<String, Direction> d : directions.entrySet()) {
+            String action = d.getKey().substring(d.getKey().indexOf('|') + 1);
+            floorCheck(action, d.getValue(), annotatedDirections.contains(d.getKey()));
+        }
     }
 
     public String getBundle() { return bundle; }
@@ -275,18 +294,39 @@ public final class ActionAuthorizer {
     private void register(CrescoAction a) {
         require(a.type(), a.name(), a.roles());
         Direction d = Direction.parse(a.direction());
-        if (d != null) direct(a.type(), a.name(), d);
+        if (d == null) return;
+        floorCheck(a.name(), d, true);
+        annotatedDirections.add(key(a.type(), a.name()));
+        direct(a.type(), a.name(), d);
+    }
+
+    /**
+     * A floor action is {@code DOWN}. Nothing declares it {@code ANY}; an annotation declares it nothing but {@code DOWN};
+     * and only the controller's own table declares one of its floor actions {@code UP}. Throws, naming the action: a
+     * plugin that says otherwise does not start.
+     */
+    private void floorCheck(String action, Direction direction, boolean annotation) {
+        if (direction == Direction.DOWN || !inFloor(action)) return;
+        if (direction == Direction.ANY || annotation || !CONTROLLER_BUNDLE.equals(bundle)) {
+            throw new IllegalArgumentException("action " + action + " is of the privileged floor of " + bundle + ": it is honoured only from"
+                    + " the node itself or a controller above it (down), and " + (annotation ? "an annotation" : "a declaration")
+                    + " cannot make it " + direction.name().toLowerCase(Locale.ROOT));
+        }
     }
 
     /**
      * Declare from where {@code type}/{@code action} is honoured ({@code action} {@code "*"}: every action of
-     * {@code type} that is not declared itself; null: a message of that type without an action). A declaration stands in
-     * place of the default (the privileged floor's {@code DOWN}, {@code ANY} for everything else). Declared more than
-     * once, the narrower stands ({@code ANY} adds nothing); {@code DOWN} and {@code UP} for the same action is a mistake
-     * in the tables and throws.
+     * {@code type} that is not declared itself and is not of the privileged floor; null: a message of that type without
+     * an action). Declared more than once, the narrower stands ({@code ANY} adds nothing); {@code DOWN} and {@code UP} for
+     * the same action is a mistake in the tables and throws.
+     *
+     * <p>An action of the privileged floor is {@code DOWN}: it cannot be declared {@code ANY} (throws), and a declaration
+     * for its whole type does not reach it. Only the controller's own table may declare one of its floor actions
+     * {@code UP}, by name, with this call (the registrations a child sends its parent); never an annotation, never a plugin.
      */
     public void direct(String type, String action, Direction direction) {
         if (direction == null) throw new IllegalArgumentException("no direction for action " + action);
+        floorCheck(action, direction, false);
         directions.merge(key(type, action), direction, (had, now) -> {
             if (had == now || now == Direction.ANY) return had;
             if (had == Direction.ANY) return now;
@@ -295,14 +335,22 @@ public final class ActionAuthorizer {
     }
 
     /**
-     * From where {@code type}/{@code action} is honoured: as declared for it, else as declared for every action of its
-     * type, else {@code DOWN} for an action of this bundle's privileged floor and {@code ANY} for any other.
+     * From where {@code type}/{@code action} is honoured. An action of this bundle's privileged floor: {@code DOWN},
+     * unless this bundle's own table declared that very action {@code UP}. Any other action: as declared for it, else as
+     * declared for every action of its type, else {@code ANY}.
      */
     public Direction directionOf(String type, String action) {
-        Direction d = declaredDirection(type, action);
+        String k = key(type, action);
+        if (inFloor(action)) return floorDirection(k);
+        Direction d = directions.get(k);
         if (d == null) d = directions.get(key(type, "*"));
-        if (d != null) return d;
-        return inFloor(action) ? Direction.DOWN : Direction.ANY;
+        return d == null ? Direction.ANY : d;
+    }
+
+    /** The direction of the floor action whose key is {@code k}: DOWN, or UP by the controller's own table (never an annotation's word). */
+    private Direction floorDirection(String k) {
+        return !directions.isEmpty() && directions.get(k) == Direction.UP && !annotatedDirections.contains(k)
+                && CONTROLLER_BUNDLE.equals(bundle) ? Direction.UP : Direction.DOWN;
     }
 
     /** The direction declared for {@code type}/{@code action} itself ({@link #direct}, an annotation), or null. */
@@ -421,12 +469,17 @@ public final class ActionAuthorizer {
     }
 
     /**
-     * Decide for {@code msg}, whose verified caller is stamped on it, by role and tenant alone (no direction is looked at).
+     * Decide for {@code msg}, whose verified caller is stamped on it, by role and tenant ONLY: no direction is looked at,
+     * so a management action is allowed from any node whose caller holds its role. Never use it on a receiving path.
      *
      * @param localTenant      this agent's own tenant, the destination (null when unknown: only a superuser tenant's
      *                         infra/admin, and infra where every tenant's is admitted, are in scope)
      * @param superuserTenants the superuser tenants
+     * @deprecated role and tenant only, no direction: a receiving path decides with
+     *             {@link #decide(MsgEvent, String, Set, Authority)} (as {@code PluginBuilder.authorize} does). Kept for
+     *             callers that hold no message path (a table's own tests, tools that explain a role).
      */
+    @Deprecated
     public Decision decide(MsgEvent msg, String localTenant, Set<String> superuserTenants) {
         return decide(msg, localTenant, superuserTenants, null, null, Mode.OFF);
     }
@@ -494,15 +547,18 @@ public final class ActionAuthorizer {
         }
         // role and tenant allow it: from where is it honoured?
         if (mode == Mode.OFF) return new Decision(true, null, action, need, c);
-        Direction direction = directions.isEmpty() ? null : directions.get(k);
+        Direction direction;
         String directed = action;
-        if (direction == null && !directions.isEmpty()) {
-            direction = directions.get(key(type, "*"));
-            directed = type;
-        }
-        if (direction == null) {
-            direction = inFloor(action) ? Direction.DOWN : Direction.ANY;
-            directed = action;
+        if (inFloor(action)) {
+            // the floor's DOWN stands whatever a whole type or a plugin's annotation says (UP only by this bundle's own table)
+            direction = floorDirection(k);
+        } else {
+            direction = directions.isEmpty() ? null : directions.get(k);
+            if (direction == null && !directions.isEmpty()) {
+                direction = directions.get(key(type, "*"));
+                if (direction != null) directed = type;
+            }
+            if (direction == null) direction = Direction.ANY;
         }
         if (direction == Direction.ANY) return new Decision(true, null, action, need, c, direction, null, null, false, false);
         Position at = given;

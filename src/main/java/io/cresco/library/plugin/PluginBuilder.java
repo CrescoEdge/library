@@ -467,21 +467,37 @@ public class PluginBuilder {
         AgentService as = agentService();
         String tenant = null;
         java.util.Set<String> superuser = java.util.Collections.emptySet();
-        // where the caller's word comes from (authority follows the tree): the controller says; nobody to ask, fail closed
-        ActionAuthorizer.Authority authority = ActionAuthorizer.Authority.CLOSED;
+        // where the caller's word comes from (authority follows the tree): the controller says
+        ActionAuthorizer.Authority authority = null;
         if (as != null) {
             try {
                 if (!as.isSecurityEnabled()) return ActionAuthorizer.insecure(msg);
                 tenant = as.getTenant();
                 java.util.Set<String> s = as.getSuperuserTenants();
                 if (s != null) superuser = s;
-                ActionAuthorizer.Authority a = as.authority();
-                if (a != null) authority = a;
+                authority = as.authority();
             } catch (Exception ignore) {
-                // unknown: fail closed (only what needs no tenant passes; an action with a direction is refused)
+                // unknown: fail closed (only what needs no tenant passes)
             }
         }
-        return table.decide(msg, tenant, superuser, authority);
+        return table.decide(msg, tenant, superuser, authority == null ? authorityUnasked() : authority);
+    }
+
+    /**
+     * The controller cannot be asked where a caller's word comes from (it is starting or stopping): this bundle's own
+     * {@code authority_direction} decides. {@code enforce}: every action with a direction is refused (fail closed).
+     * {@code off}, {@code log} or not set (the default is {@code log}): role and tenant only, as before directions
+     * existed -- nothing is refused for a direction and nothing is counted, so a node that does not enforce loses no
+     * keep-alive around its start and stop. A value that is no mode, or that cannot be read: closed.
+     */
+    ActionAuthorizer.Authority authorityUnasked() {
+        try {
+            ActionAuthorizer.Mode mode = ActionAuthorizer.Mode.parse(config == null ? null : config.getStringParam(ActionAuthorizer.Mode.KEY));
+            return mode == ActionAuthorizer.Mode.OFF || mode == ActionAuthorizer.Mode.LOG
+                    ? ActionAuthorizer.Authority.NONE : ActionAuthorizer.Authority.CLOSED;
+        } catch (RuntimeException unreadable) {
+            return ActionAuthorizer.Authority.CLOSED;
+        }
     }
 
     /**
@@ -499,10 +515,12 @@ public class PluginBuilder {
         ActionAuthorizer.Decision d = authorize(msg, table);
         if (d.allowed) {
             // authority_direction=log: allowed, and the controller counts and logs what enforce would refuse
-            if (d.wouldRefuse) wouldRefuse(msg, d);
+            if (d.wouldRefuse) directionReport(msg, d);
             return true;
         }
         denied.incrementAndGet();
+        // refused for where its speaker stands: the controller counts those by themselves (authz.direction.refused)
+        if (d.directionRefused) directionReport(msg, d);
         String action = d.action == null ? "none" : d.action;
         try {
             if (crescoMeterRegistry != null) {
@@ -535,11 +553,14 @@ public class PluginBuilder {
         return false;
     }
 
-    private void wouldRefuse(MsgEvent msg, ActionAuthorizer.Decision d) {
+    /** Tell the controller of a call it counts: one enforce would refuse (log mode), or one refused for its direction. */
+    private void directionReport(MsgEvent msg, ActionAuthorizer.Decision d) {
         try {
             AgentService as = agentService();
             ActionAuthorizer.Authority a = as == null ? null : as.authority();
-            if (a != null) a.wouldRefuse(msg, d);
+            if (a == null) return;
+            if (d.directionRefused) a.refused(msg, d);
+            else a.wouldRefuse(msg, d);
         } catch (Exception ignore) {
             // reporting never changes the decision
         }

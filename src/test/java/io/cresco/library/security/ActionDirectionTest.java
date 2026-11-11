@@ -152,7 +152,7 @@ class ActionDirectionTest {
     }
 
     @Test
-    void thePrivilegedFloorIsDownForEveryBundleUnlessDeclaredOtherwise() {
+    void thePrivilegedFloorIsDownForEveryBundleAndOnlyTheControllersOwnTableMakesOneOfItsActionsUp() {
         assertFalse(ActionAuthorizer.PRIVILEGED.isEmpty());
         for (Map.Entry<String, Set<String>> bundle : ActionAuthorizer.PRIVILEGED.entrySet()) {
             ActionAuthorizer a = new ActionAuthorizer(bundle.getKey());
@@ -172,11 +172,120 @@ class ActionDirectionTest {
         }
         // the same action name in a bundle whose floor does not list it
         assertEquals(Direction.ANY, new ActionAuthorizer("io.cresco.sysinfo").directionOf("EXEC", "run_process"));
-        // declared otherwise: the declaration stands in place of the default
+        // the controller's own table names a registration UP: for that action and type, nothing else
         ActionAuthorizer region = new ActionAuthorizer(ActionAuthorizer.CONTROLLER_BUNDLE);
         region.direct("CONFIG", "agent_enable", Direction.UP);
         assertEquals(Direction.UP, region.directionOf("CONFIG", "agent_enable"));
+        assertEquals(Direction.DOWN, region.directionOf("EXEC", "agent_enable"));
         assertEquals(Direction.DOWN, region.directionOf("CONFIG", "agent_disable"));
+        assertTrue(region.decide(msg(MsgEvent.Type.CONFIG, "agent_enable", INFRA), T, Set.of(SU), Position.BELOW, Mode.ENFORCE).allowed);
+        // a plugin's table does not: its floor is management, never a report
+        ActionAuthorizer executor = new ActionAuthorizer("io.cresco.executor");
+        IllegalArgumentException up = assertThrows(IllegalArgumentException.class, () -> executor.direct("EXEC", "run_process", Direction.UP));
+        assertTrue(up.getMessage().contains("run_process"), up.getMessage());
+        assertEquals(Direction.DOWN, executor.directionOf("EXEC", "run_process"));
+    }
+
+    @Test
+    void aDeclarationForAWholeTypeNeverReachesAFloorAction() {
+        for (Direction whole : new Direction[]{Direction.ANY, Direction.UP}) {
+            ActionAuthorizer a = new ActionAuthorizer(ActionAuthorizer.CONTROLLER_BUNDLE);
+            a.open("KPI", "*");
+            a.direct("KPI", "*", whole);
+            a.open("EXEC", "*");
+            a.direct("EXEC", "*", whole);
+            assertEquals(whole, a.directionOf("KPI", "anything"), "premise: the whole type is " + whole);
+            for (String floor : new String[]{"pluginadd", "killjvm", "getfiledata", "setloglevel", "agent_enable"}) {
+                for (String type : new String[]{"KPI", "EXEC"}) {
+                    assertEquals(Direction.DOWN, a.directionOf(type, floor), type + " * " + whole + " widened " + floor);
+                    Decision below = a.decide(msg(MsgEvent.Type.valueOf(type), floor, INFRA), T, Set.of(SU), Position.BELOW, Mode.ENFORCE);
+                    assertFalse(below.allowed, type + " " + floor + " from below, under a whole-type " + whole);
+                    assertTrue(below.directionRefused);
+                    assertEquals(floor, below.directed, "counted under the floor action, not the type");
+                    assertFalse(a.decide(msg(MsgEvent.Type.valueOf(type), floor, INFRA), T, Set.of(SU), Position.ELSEWHERE, Mode.ENFORCE).allowed);
+                    assertTrue(a.decide(msg(MsgEvent.Type.valueOf(type), floor, INFRA), T, Set.of(SU), Position.ABOVE, Mode.ENFORCE).allowed);
+                }
+            }
+        }
+    }
+
+    @Test
+    void nothingDeclaresAFloorActionHonouredFromAnywhere() {
+        ActionAuthorizer controller = new ActionAuthorizer(ActionAuthorizer.CONTROLLER_BUNDLE);
+        IllegalArgumentException any = assertThrows(IllegalArgumentException.class, () -> controller.direct("CONFIG", "pluginadd", Direction.ANY));
+        assertTrue(any.getMessage().contains("pluginadd") && any.getMessage().contains("privileged floor"), any.getMessage());
+        assertEquals(Direction.DOWN, controller.directionOf("CONFIG", "pluginadd"));
+        assertNull(controller.declaredDirection("CONFIG", "pluginadd"), "a refused declaration was kept");
+        controller.direct("CONFIG", "pluginadd", Direction.DOWN);                    // saying what it is, is fine
+        // declared while the bundle was not known yet: held to the floor when it is, and never read as ANY meanwhile
+        ActionAuthorizer late = new ActionAuthorizer(null);
+        late.direct("EXEC", "run_process", Direction.ANY);
+        assertThrows(IllegalArgumentException.class, () -> late.setBundle("io.cresco.executor"));
+        assertEquals(Direction.DOWN, late.directionOf("EXEC", "run_process"));
+        assertFalse(late.decide(exec("run_process", INFRA), T, Set.of(SU), Position.ELSEWHERE, Mode.ENFORCE).allowed);
+    }
+
+    @CrescoAction(name = "run_process", summary = "x", roles = {"infra", "admin"}, direction = "any")
+    static class WidensItsFloor { }
+
+    @CrescoAction(name = "putfiles", summary = "x", direction = "up")
+    static class TurnsItsFloorUp { }
+
+    @CrescoAction(name = "run_process", summary = "x", direction = "down")
+    @CrescoAction(name = "status", summary = "x", direction = "any")
+    static class KeepsItsFloor { }
+
+    @Test
+    void aPluginThatDeclaresAFloorActionAnyOrUpDoesNotStart() {
+        IllegalArgumentException any = assertThrows(IllegalArgumentException.class,
+                () -> new ActionAuthorizer("io.cresco.executor").register(WidensItsFloor.class));
+        assertTrue(any.getMessage().contains("run_process") && any.getMessage().contains("annotation") && any.getMessage().contains("any"),
+                "the message names the action: " + any.getMessage());
+        IllegalArgumentException up = assertThrows(IllegalArgumentException.class,
+                () -> new ActionAuthorizer("io.cresco.filerepo").register(TurnsItsFloorUp.class));
+        assertTrue(up.getMessage().contains("putfiles"), up.getMessage());
+        // through the plugin's own start: setExecutor reads the annotations
+        Map<String, Object> cfg = new HashMap<>();
+        cfg.put("pluginID", "p1");
+        PluginBuilder pb = new PluginBuilder(new StubAgent(), "io.cresco.test.Plugin", null, cfg);
+        pb.getAuthorizer().setBundle("io.cresco.executor");
+        assertThrows(IllegalArgumentException.class, () -> pb.setExecutor(new AnyProcessExecutor()));
+        assertEquals(Direction.DOWN, pb.getAuthorizer().directionOf("CONFIG", "run_process"));
+        pb.close();
+        // the same annotation in a bundle whose floor does not list the action is that bundle's own business
+        ActionAuthorizer other = new ActionAuthorizer("io.cresco.sysinfo");
+        other.register(WidensItsFloor.class);
+        assertEquals(Direction.ANY, other.directionOf("EXEC", "run_process"));
+        // and saying down on a floor action, or any on another, starts
+        ActionAuthorizer fine = new ActionAuthorizer("io.cresco.executor");
+        fine.register(KeepsItsFloor.class);
+        assertEquals(Direction.DOWN, fine.directionOf("EXEC", "run_process"));
+        assertEquals(Direction.ANY, fine.directionOf("EXEC", "status"));
+        // an annotation read before the bundle was known never moves the floor, and the bundle's name then refuses it
+        ActionAuthorizer late = new ActionAuthorizer(null);
+        late.register(TurnsItsFloorUp.class);
+        assertThrows(IllegalArgumentException.class, () -> late.setBundle("io.cresco.filerepo"));
+        assertEquals(Direction.DOWN, late.directionOf("EXEC", "putfiles"));
+    }
+
+    @CrescoAction(name = "run_process", type = "CONFIG", summary = "x", roles = {"infra", "admin"}, direction = "any")
+    static final class AnyProcessExecutor implements Executor {
+        public MsgEvent executeCONFIG(MsgEvent m) { return m; }
+        public MsgEvent executeDISCOVER(MsgEvent m) { return m; }
+        public MsgEvent executeERROR(MsgEvent m) { return m; }
+        public MsgEvent executeINFO(MsgEvent m) { return m; }
+        public MsgEvent executeEXEC(MsgEvent m) { return m; }
+        public MsgEvent executeWATCHDOG(MsgEvent m) { return m; }
+        public MsgEvent executeKPI(MsgEvent m) { return m; }
+    }
+
+    @Test
+    void theSignatureWithoutADirectionIsMarkedNotForAReceivingPath() throws Exception {
+        java.lang.reflect.Method roleOnly = ActionAuthorizer.class.getMethod("decide", MsgEvent.class, String.class, Set.class);
+        assertNotNull(roleOnly.getAnnotation(Deprecated.class), "decide(msg, tenant, superusers) looks at no direction: it must say so");
+        for (java.lang.reflect.Method m : ActionAuthorizer.class.getMethods()) {
+            if (m.getName().equals("decide") && m.getParameterCount() > 3) assertNull(m.getAnnotation(Deprecated.class), m.toString());
+        }
     }
 
     @Test
@@ -188,7 +297,7 @@ class ActionDirectionTest {
         a.direct("WATCHDOG", "special", Direction.ANY);
         assertEquals(Direction.UP, a.directionOf("WATCHDOG", null));
         assertEquals(Direction.UP, a.directionOf("WATCHDOG", "anything"));
-        assertEquals(Direction.UP, a.directionOf("WATCHDOG", "pluginadd"), "a declaration stands in place of the floor's default");
+        assertEquals(Direction.DOWN, a.directionOf("WATCHDOG", "pluginadd"), "a whole type's declaration reached a floor action");
         assertEquals(Direction.ANY, a.directionOf("WATCHDOG", "special"));
         assertEquals(Direction.ANY, a.directionOf("EXEC", "anything"));
         Decision d = a.decide(msg(MsgEvent.Type.WATCHDOG, null, INFRA), T, Set.of(SU), Position.ELSEWHERE, Mode.LOG);
@@ -270,6 +379,8 @@ class ActionDirectionTest {
         @Override public Mode mode() { return mode; }
         @Override public Position positionOf(MsgEvent msg, Caller caller) { asked.incrementAndGet(); return position; }
         @Override public void wouldRefuse(MsgEvent msg, Decision decision) { reported.add(decision); }
+        final List<Decision> refusals = new CopyOnWriteArrayList<>();
+        @Override public void refused(MsgEvent msg, Decision decision) { refusals.add(decision); }
     }
 
     @Test
@@ -400,6 +511,15 @@ class ActionDirectionTest {
                 + " (caller controller:t1/r/sibling[infra] speaks from a node elsewhere)", agent.out.get(0).getParam("status_desc"));
         assertEquals(1, pb.deniedCount());
         assertTrue(agent.authority.reported.isEmpty(), "a refusal is not a would-refuse");
+        assertEquals(1, agent.authority.refusals.size(), "the controller was not told of the refusal (or told twice)");
+        assertEquals("run_process", agent.authority.refusals.get(0).directed);
+        assertEquals(Position.ELSEWHERE, agent.authority.refusals.get(0).position);
+        // a refusal for the caller's role is not one for its direction
+        pb.msgIn(call("run_process", USER));
+        await(() -> pb.deniedCount() == 2);
+        assertEquals(2, pb.deniedCount());
+        assertEquals(1, agent.authority.refusals.size(), "a role refusal was counted as a direction's");
+        agent.out.clear();
         // the same call from the region controller above, and from the node itself, runs
         for (Position from : new Position[]{Position.ABOVE, Position.SELF}) {
             int before = ex.ran.get();
@@ -414,7 +534,8 @@ class ActionDirectionTest {
         pb.msgIn(call("status", Caller.controller(T, "r", "sibling")));
         await(() -> ex.ran.get() == before + 1);
         assertEquals(before + 1, ex.ran.get());
-        assertEquals(1, pb.deniedCount());
+        assertEquals(2, pb.deniedCount(), "the sibling's run_process and the user's: nothing else was refused");
+        assertEquals(1, agent.authority.refusals.size());
         pb.close();
     }
 
@@ -429,6 +550,7 @@ class ActionDirectionTest {
         assertEquals(0, pb.deniedCount());
         await(() -> agent.authority.reported.size() == 1);
         assertEquals(1, agent.authority.reported.size(), "the controller was not told (or told twice)");
+        assertTrue(agent.authority.refusals.isEmpty(), "a would-refuse is not a refusal");
         Decision told = agent.authority.reported.get(0);
         assertEquals("run_process", told.directed);
         assertEquals(Position.ELSEWHERE, told.position);
@@ -459,15 +581,52 @@ class ActionDirectionTest {
         pb.close();
     }
 
+    /** The executor plugin with {@code authority_direction} as given in its own config (null: not set), under {@code agent}. */
+    private static PluginBuilder executorPlugin(AgentService agent, String ownMode) {
+        Map<String, Object> cfg = new HashMap<>();
+        cfg.put("pluginID", "p1");
+        if (ownMode != null) cfg.put("authority_direction", ownMode);
+        PluginBuilder pb = new PluginBuilder(agent, "io.cresco.test.Plugin", null, cfg);
+        pb.getAuthorizer().setBundle("io.cresco.executor");
+        pb.setExecutor(new ProcessExecutor());
+        return pb;
+    }
+
     @Test
-    void aControllerThatCannotBeAskedFailsClosedForADirectedAction() {
-        StubAgent broken = new StubAgent() {
+    void whenTheControllerCannotBeAskedTheBundlesOwnModeDecides() {
+        // a controller that is starting or stopping: asking it throws, or it has no answer
+        StubAgent throwing = new StubAgent() {
             @Override public Authority authority() { throw new IllegalStateException("stopping"); }
         };
-        PluginBuilder pb = executorPlugin(broken, new ProcessExecutor());
-        assertFalse(pb.authorize(call("run_process", Caller.controller(T, "r", "rc"))).allowed);
-        assertTrue(pb.authorize(call("status", Caller.controller(T, "r", "rc"))).allowed, "an action honoured from anywhere");
-        pb.close();
+        StubAgent silent = new StubAgent() {
+            @Override public Authority authority() { return null; }
+        };
+        MsgEvent fromRegion = call("run_process", Caller.controller(T, "r", "rc"));
+        for (StubAgent broken : new StubAgent[]{throwing, silent}) {
+            // enforce: closed -- nobody can say the caller stands above
+            PluginBuilder enforce = executorPlugin(broken, "enforce");
+            Decision closed = enforce.authorize(call("run_process", Caller.controller(T, "r", "rc")));
+            assertFalse(closed.allowed, "enforce let a management action through while nobody could place its caller");
+            assertTrue(closed.directionRefused);
+            assertTrue(enforce.authorize(call("status", Caller.controller(T, "r", "rc"))).allowed, "an action honoured from anywhere");
+            enforce.close();
+            // off, log, and not set (log is the default): role and tenant only, as before directions existed
+            for (String mode : new String[]{"off", "log", null, " LOG "}) {
+                PluginBuilder pb = executorPlugin(broken, mode);
+                Decision d = pb.authorize(call("run_process", Caller.controller(T, "r", "rc")));
+                assertTrue(d.allowed, "authority_direction=" + mode + " refused a call around the controller's start or stop");
+                assertFalse(d.wouldRefuse, "authority_direction=" + mode + ": nothing is counted when nobody can place the caller");
+                assertNull(d.direction);
+                assertTrue(pb.admit(fromRegion));
+                assertFalse(pb.authorize(call("run_process", USER)).allowed, "role and tenant still decide");
+                assertEquals(0, pb.deniedCount());
+                pb.close();
+            }
+            // a value that is no mode: closed
+            PluginBuilder typo = executorPlugin(broken, "enforced");
+            assertFalse(typo.authorize(call("run_process", Caller.controller(T, "r", "rc"))).allowed, "an unknown mode must fail closed");
+            typo.close();
+        }
     }
 
     @Test
