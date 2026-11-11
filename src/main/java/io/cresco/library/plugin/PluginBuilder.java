@@ -467,23 +467,28 @@ public class PluginBuilder {
         AgentService as = agentService();
         String tenant = null;
         java.util.Set<String> superuser = java.util.Collections.emptySet();
+        // where the caller's word comes from (authority follows the tree): the controller says; nobody to ask, fail closed
+        ActionAuthorizer.Authority authority = ActionAuthorizer.Authority.CLOSED;
         if (as != null) {
             try {
                 if (!as.isSecurityEnabled()) return ActionAuthorizer.insecure(msg);
                 tenant = as.getTenant();
                 java.util.Set<String> s = as.getSuperuserTenants();
                 if (s != null) superuser = s;
+                ActionAuthorizer.Authority a = as.authority();
+                if (a != null) authority = a;
             } catch (Exception ignore) {
-                // unknown: fail closed (only what needs no tenant passes)
+                // unknown: fail closed (only what needs no tenant passes; an action with a direction is refused)
             }
         }
-        return table.decide(msg, tenant, superuser);
+        return table.decide(msg, tenant, superuser, authority);
     }
 
     /**
      * Authorize {@code msg} and, when it is refused: count it ({@code cresco.authz.denied}), log it (rate limited), and
-     * answer an RPC request with {@code status_code=403}, {@code status_desc=unauthorized: <action> needs <roles>}.
-     * Returns true when it may run.
+     * answer an RPC request with {@code status_code=403}, {@code status_desc=unauthorized: <action> needs <roles>} -- or,
+     * refused for where its speaker stands, {@code unauthorized: <action> is honoured only from the node itself or a
+     * controller above it} ({@link ActionAuthorizer.Decision#statusDesc}). Returns true when it may run.
      */
     public boolean admit(MsgEvent msg) {
         return admit(msg, authorizer);
@@ -492,7 +497,11 @@ public class PluginBuilder {
     /** {@link #admit(MsgEvent)} against another table (the controller's regional and global tiers). */
     public boolean admit(MsgEvent msg, ActionAuthorizer table) {
         ActionAuthorizer.Decision d = authorize(msg, table);
-        if (d.allowed) return true;
+        if (d.allowed) {
+            // authority_direction=log: allowed, and the controller counts and logs what enforce would refuse
+            if (d.wouldRefuse) wouldRefuse(msg, d);
+            return true;
+        }
         denied.incrementAndGet();
         String action = d.action == null ? "none" : d.action;
         try {
@@ -524,6 +533,16 @@ public class PluginBuilder {
             }
         }
         return false;
+    }
+
+    private void wouldRefuse(MsgEvent msg, ActionAuthorizer.Decision d) {
+        try {
+            AgentService as = agentService();
+            ActionAuthorizer.Authority a = as == null ? null : as.authority();
+            if (a != null) a.wouldRefuse(msg, d);
+        } catch (Exception ignore) {
+            // reporting never changes the decision
+        }
     }
 
     /** An RPC request (not a reply): its caller's call id is keyed by its source, which a reply has swapped away. */
