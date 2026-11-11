@@ -53,6 +53,16 @@ public interface AgentService {
 	default boolean isPluginSigningRequired() { return true; }
 
 	/**
+	 * Who says where a message's speaker stands relative to this node, and what a call from the wrong place meets
+	 * ({@code authority_direction}): asked by {@code PluginBuilder.authorize} for every action that has a direction
+	 * ({@link io.cresco.library.security.ActionAuthorizer}). A controller of an earlier release does not know directions
+	 * and answers {@link io.cresco.library.security.ActionAuthorizer.Authority#NONE}: nothing is looked at, as before.
+	 */
+	default io.cresco.library.security.ActionAuthorizer.Authority authority() {
+		return io.cresco.library.security.ActionAuthorizer.Authority.NONE;
+	}
+
+	/**
 	 * The node's security profile ({@code security_profile}: production or standard; INSECURE only in explicit insecure
 	 * debug mode). A plugin enforces its own side of it -- in production, e.g., no password logins. An older controller
 	 * that does not know profiles answers {@link io.cresco.library.security.SecurityProfile#STANDARD}.

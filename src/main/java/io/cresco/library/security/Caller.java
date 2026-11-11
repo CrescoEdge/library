@@ -73,12 +73,15 @@ public final class Caller {
     private final String tenant;
     private final Set<String> roles;
     private final Kind kind;
+    /** The principal's parts after its prefix (tenant first), as parsed; null for {@code anonymous}. Never handed out. */
+    private final String[] parts;
 
-    private Caller(String principal, String tenant, Set<String> roles, Kind kind) {
+    private Caller(String principal, String tenant, Set<String> roles, Kind kind, String[] parts) {
         this.principal = principal;
         this.tenant = tenant;
         this.roles = roles;
         this.kind = kind;
+        this.parts = parts;
     }
 
     /**
@@ -121,7 +124,7 @@ public final class Caller {
 
     /** The insecure development-mode caller: {@code anonymous}, no tenant, every role. */
     public static Caller anonymous() {
-        return new Caller(ANONYMOUS, "", ALL_ROLES, Kind.ANONYMOUS);
+        return new Caller(ANONYMOUS, "", ALL_ROLES, Kind.ANONYMOUS, null);
     }
 
     /**
@@ -156,7 +159,7 @@ public final class Caller {
             roles.add(t);
         }
         if (roles.isEmpty()) return null;
-        return new Caller(principal, tenant, Collections.unmodifiableSet(roles), kind);
+        return new Caller(principal, tenant, Collections.unmodifiableSet(roles), kind, parts);
     }
 
     /** Plugin ids and API user names are wider than node names; neither may carry the separators. */
@@ -248,11 +251,11 @@ public final class Caller {
     /** {@code <pluginid>} for a plugin caller; null otherwise. */
     public String getPluginId() { return kind == Kind.PLUGIN ? part(3) : null; }
     /** {@code <user>} for an API caller; null otherwise. */
-    public String getUser() { return kind == Kind.API ? principal.substring(principal.indexOf(':') + 1).split("/", -1)[1] : null; }
+    public String getUser() { return kind == Kind.API ? parts[1] : null; }
 
+    /** Read on every message that has a direction (where its caller's node stands): the parts are kept, never split again. */
     private String part(int i) {
         if (kind == Kind.ANONYMOUS || kind == Kind.API) return null;
-        String[] parts = principal.substring(principal.indexOf(':') + 1).split("/", -1);
         return i < parts.length ? parts[i] : null;
     }
 
